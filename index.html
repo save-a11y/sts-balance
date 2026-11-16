@@ -41,7 +41,7 @@ input:focus{border-color:var(--blue);box-shadow:0 0 0 4px rgba(37,99,235,.15)}
 .target-badge{display:inline-flex;align-items:center;gap:5px;color:#FED7AA;font-weight:700}
 .grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin:14px 0}@media(max-width:700px){.grid{grid-template-columns:1fr}}
 table{width:100%;border-collapse:collapse;font-size:14px}th{text-align:left;padding:10px;color:var(--muted)}td{padding:11px 10px;border-top:1px solid var(--border)}
-.pill{padding:5px 10px;border-radius:999px;font-weight:800;font-size:12px}.credit{background:#DBEAFE;color:#1E40AF}.debit{background:#FFEDD5;color:#C2410C}
+.pill{padding:5px 10px;border-radius:999px;font-weight:800;font-size:12px}.paid{background:#DCFCE7;color:#15803D}.debit{background:#FFEDD5;color:#C2410C}
 .userrow{display:flex;justify-content:space-between;align-items:center;padding:14px;border:1px solid var(--border);border-radius:16px;margin-bottom:10px;background:var(--card);cursor:pointer}
 .userrow:hover{border-color:var(--blue2)}
 .avatar{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--orange));color:#fff;display:grid;place-items:center;font-weight:900;flex-shrink:0;overflow:hidden}
@@ -120,7 +120,7 @@ footer{text-align:center;padding:22px;color:var(--blue);font-weight:800}body.dar
 <div class="prog-row"><span id="uProg"></span><span id="uReachedBadge" class="target-badge hidden"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg> Target reached — ready to withdraw</span></div>
 </div>
 <div class="grid"><div class="card"><b>Target Amount</b><div id="uTarget" style="font-size:22px;font-weight:900;margin-top:6px"></div></div><div class="card"><b>Target Date</b><div id="uDate" style="font-size:22px;font-weight:900;margin-top:6px"></div></div><div class="card"><b>Days Remaining</b><div id="uDays" style="font-size:22px;font-weight:900;margin-top:6px"></div></div></div>
-<div class="card"><h3>History</h3><div style="overflow:auto"><table><thead><tr><th>Date</th><th>Description</th><th>Type</th><th>Amount</th></tr></thead><tbody id="uHist"></tbody></table></div><button class="btn btn-blue" style="max-width:220px" onclick="logout()">Log Out</button></div>
+<div class="card"><h3>History</h3><div style="overflow:auto"><table><thead><tr><th>Date</th><th>Description</th><th>Status</th><th>Amount</th></tr></thead><tbody id="uHist"></tbody></table></div><button class="btn btn-blue" style="max-width:220px" onclick="logout()">Log Out</button></div>
 </div>
 
 <div id="adminView" class="hidden">
@@ -177,15 +177,15 @@ footer{text-align:center;padding:22px;color:var(--blue);font-weight:800}body.dar
 <footer>uninestnigeria.com.ng</footer>
 <script>
 let users = JSON.parse(localStorage.getItem('sts_users')||'null') || [
-{id:1,name:'Ada',code:'4821',target:500000,targetDate:'2026-09-30',tx:[{date:'2026-09-01',desc:'Opening Balance',type:'Credit',amount:120000},{date:'2026-10-05',desc:'Monthly Savings',type:'Credit',amount:50000},{date:'2026-11-02',desc:'School Fee',type:'Debit',amount:30000}]},
-{id:2,name:'Chidi',code:'7710',target:300000,targetDate:'2026-12-31',tx:[{date:'2026-09-10',desc:'Opening Balance',type:'Credit',amount:80000},{date:'2026-10-12',desc:'Monthly Savings',type:'Credit',amount:40000}]},
-{id:3,name:'Funmi',code:'9305',target:750000,targetDate:'2027-03-31',tx:[{date:'2026-08-20',desc:'Opening Balance',type:'Credit',amount:200000}]}
+{id:1,name:'Ada',code:'4821',target:500000,targetDate:'2026-09-30',tx:[{date:'2026-09-01',desc:'Opening Balance',type:'Paid',amount:120000},{date:'2026-10-05',desc:'Monthly Savings',type:'Paid',amount:50000},{date:'2026-11-02',desc:'Top-up Savings',type:'Paid',amount:30000}]},
+{id:2,name:'Chidi',code:'7710',target:300000,targetDate:'2026-12-31',tx:[{date:'2026-09-10',desc:'Opening Balance',type:'Paid',amount:80000},{date:'2026-10-12',desc:'Monthly Savings',type:'Paid',amount:40000}]},
+{id:3,name:'Funmi',code:'9305',target:750000,targetDate:'2027-03-31',tx:[{date:'2026-08-20',desc:'Opening Balance',type:'Paid',amount:200000}]}
 ];
 let current=null, detailId=null, toastTimer=null, userToastTimer=null;
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function save(){try{localStorage.setItem('sts_users',JSON.stringify(users))}catch(e){}}
 function fmt(n){return '₦'+Number(n).toLocaleString()}
-function bal(u){return u.tx.reduce((s,t)=>s+(t.type==='Credit'?t.amount:-t.amount),0)}
+function bal(u){return u.tx.reduce((s,t)=>s+((t.withdraw||t.type==='Debit')?-t.amount:t.amount),0)}
 function daysLeft(d){return Math.max(0,Math.ceil((new Date(d)-new Date())/(1000*60*60*24)))}
 function toggleTheme(){document.body.classList.toggle('dark');let d=document.body.classList.contains('dark');localStorage.setItem('sts_theme',d?'dark':'light');document.getElementById('themeBtn').textContent=d?'☀️ White':'🌙 Dark'}
 if(localStorage.getItem('sts_theme')==='dark') toggleTheme();
@@ -221,7 +221,7 @@ document.getElementById('uTargetLine').textContent='Target: '+fmt(u.target)+' �
 let reached=u.target>0 && b>=u.target;
 document.getElementById('withdrawBtn').classList.toggle('hidden',!reached);
 document.getElementById('uReachedBadge').classList.toggle('hidden',!reached);
-document.getElementById('uHist').innerHTML=u.tx.map(t=>'<tr><td>'+esc(t.date)+'</td><td>'+esc(t.desc)+'</td><td><span class="pill '+(t.type==='Credit'?'credit':'debit')+'">'+esc(t.type)+'</span></td><td>'+fmt(t.amount)+'</td></tr>').join('');
+document.getElementById('uHist').innerHTML=u.tx.map(t=>{let w=!!(t.withdraw||t.type==='Debit');return '<tr><td>'+esc(t.date)+'</td><td>'+esc(t.desc)+'</td><td><span class="pill '+(w?'debit':'paid')+'">Paid</span></td><td>'+(w?'-':'')+fmt(t.amount)+'</td></tr>'}).join('');
 }
 function pickAvatar(){document.getElementById('avatarInput').click()}
 function handleAvatarFile(e){
@@ -265,7 +265,7 @@ let note=document.getElementById('wNote').value.trim()||'Target Withdrawal';
 let err=document.getElementById('wErr');
 if(!amt||amt<=0){err.innerHTML='<div class="err">Enter a valid withdrawal amount.</div>';return}
 if(amt>b){err.innerHTML='<div class="err">Amount cannot exceed your current balance ('+fmt(b)+').</div>';return}
-current.tx.push({date:new Date().toISOString().slice(0,10),desc:note,type:'Debit',amount:amt});
+current.tx.push({date:new Date().toISOString().slice(0,10),desc:note,type:'Paid',withdraw:true,amount:amt});
 save(); closeWithdraw(); renderUser(); showUserToast('Withdrawal of '+fmt(amt)+' recorded.',true);
 }
 function showAdmin(){document.getElementById('loginView').classList.add('hidden'); document.getElementById('adminView').classList.remove('hidden'); renderAdminList()}
@@ -280,17 +280,17 @@ function openDetail(id){
 detailId=id; let u=users.find(x=>x.id===id); if(!u)return;
 document.getElementById('adminList').innerHTML='';
 let d=document.getElementById('adminDetail'); d.classList.remove('hidden');
-d.innerHTML='<div class="card"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center"><div class="flex"><div class="avatar" style="width:52px;height:52px;font-size:18px">'+renderAvatarHtml(u)+'</div><div><h2>'+esc(u.name)+' • '+esc(u.code)+'</h2><p style="color:var(--muted)">Target '+esc(u.targetDate)+' • '+daysLeft(u.targetDate)+' days remaining</p></div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="ghost" onclick="copyCode()">Copy User Link / Code</button><button class="danger" onclick="askDelete()">🗑 Delete</button></div></div><div class="balance" style="margin-top:14px"><h2>Current Balance</h2><div class="big">'+fmt(bal(u))+'</div><p>Target '+fmt(u.target)+'</p></div><h3 style="margin:16px 0 8px">Add Transaction</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px"><input id="tDate" type="date" value="'+new Date().toISOString().slice(0,10)+'"><input id="tDesc" placeholder="Description"><select id="tType"><option>Credit</option><option>Debit</option></select><input id="tAmt" type="number" placeholder="Amount"></div><div id="txErr"></div><button class="btn" onclick="addTx()">Add Transaction</button><h3 style="margin:16px 0 8px">History</h3><div style="overflow:auto"><table><thead><tr><th>Date</th><th>Description</th><th>Type</th><th>Amount</th></tr></thead><tbody>'+u.tx.map(t=>'<tr><td>'+esc(t.date)+'</td><td>'+esc(t.desc)+'</td><td>'+esc(t.type)+'</td><td>'+fmt(t.amount)+'</td></tr>').join('')+'</tbody></table></div><button class="ghost" style="margin-top:14px" onclick="renderAdminList()">← Back to List</button></div>';
+d.innerHTML='<div class="card"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center"><div class="flex"><div class="avatar" style="width:52px;height:52px;font-size:18px">'+renderAvatarHtml(u)+'</div><div><h2>'+esc(u.name)+' • '+esc(u.code)+'</h2><p style="color:var(--muted)">Target '+esc(u.targetDate)+' • '+daysLeft(u.targetDate)+' days remaining</p></div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="ghost" onclick="copyCode()">Copy User Link / Code</button><button class="danger" onclick="askDelete()">🗑 Delete</button></div></div><div class="balance" style="margin-top:14px"><h2>Current Balance</h2><div class="big">'+fmt(bal(u))+'</div><p>Target '+fmt(u.target)+'</p></div><div style="display:flex;align-items:center;gap:8px;margin:16px 0 8px"><h3>Add Transaction</h3><span class="pill paid">Paid</span></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px"><input id="tDate" type="date" value="'+new Date().toISOString().slice(0,10)+'"><input id="tDesc" placeholder="Description"><input id="tAmt" type="number" placeholder="Amount"></div><div id="txErr"></div><button class="btn" onclick="addTx()">Add Transaction</button><h3 style="margin:16px 0 8px">History</h3><div style="overflow:auto"><table><thead><tr><th>Date</th><th>Description</th><th>Status</th><th>Amount</th></tr></thead><tbody>'+u.tx.map(t=>{let w=!!(t.withdraw||t.type==='Debit');return '<tr><td>'+esc(t.date)+'</td><td>'+esc(t.desc)+'</td><td><span class="pill '+(w?'debit':'paid')+'">Paid</span></td><td>'+(w?'-':'')+fmt(t.amount)+'</td></tr>'}).join('')+'</tbody></table></div><button class="ghost" style="margin-top:14px" onclick="renderAdminList()">← Back to List</button></div>';
 }
 function copyCode(){let u=users.find(x=>x.id===detailId); if(!u)return; let txt='Name: '+u.name+' Code: '+u.code; if(navigator.clipboard) navigator.clipboard.writeText(txt).catch(()=>{}); showAdminToast('Copied: '+txt,true)}
-function addTx(){let u=users.find(x=>x.id===detailId); if(!u)return; let amt=Number(document.getElementById('tAmt').value); let err=document.getElementById('txErr'); if(!amt||amt<=0){err.innerHTML='<div class="err">Enter amount</div>';return} err.innerHTML=''; let type=document.getElementById('tType').value; u.tx.push({date:document.getElementById('tDate').value||new Date().toISOString().slice(0,10),desc:document.getElementById('tDesc').value||'Transaction',type:type,amount:amt}); save(); openDetail(detailId); showAdminToast(type+' of '+fmt(amt)+' added.',true)}
+function addTx(){let u=users.find(x=>x.id===detailId); if(!u)return; let amt=Number(document.getElementById('tAmt').value); let err=document.getElementById('txErr'); if(!amt||amt<=0){err.innerHTML='<div class="err">Enter amount</div>';return} err.innerHTML=''; u.tx.push({date:document.getElementById('tDate').value||new Date().toISOString().slice(0,10),desc:document.getElementById('tDesc').value||'Transaction',type:'Paid',amount:amt}); save(); openDetail(detailId); showAdminToast('Paid '+fmt(amt)+' added.',true)}
 function askDelete(){let u=users.find(x=>x.id===detailId); if(!u)return; document.getElementById('delTitle').textContent='Delete '+u.name+'?'; document.getElementById('deleteModal').classList.remove('hidden')}
 function closeDeleteModal(){document.getElementById('deleteModal').classList.add('hidden')}
 function confirmDelete(){let u=users.find(x=>x.id===detailId); closeDeleteModal(); if(!u)return; let name=u.name; users=users.filter(x=>x.id!==detailId); detailId=null; save(); renderAdminList(); showAdminToast(name+' deleted',true)}
 function openNew(){document.getElementById('newForm').classList.remove('hidden'); document.getElementById('adminList').innerHTML=''; document.getElementById('adminDetail').classList.add('hidden')}
 function closeNew(){document.getElementById('newForm').classList.add('hidden'); renderAdminList()}
 function genCode(){let c=''; do{c=String(Math.floor(1000+Math.random()*9000))}while(users.some(u=>u.code===c)); document.getElementById('nCode').value=c}
-function createUser(){let name=document.getElementById('nName').value.trim(); let code=document.getElementById('nCode').value.trim(); let target=Number(document.getElementById('nTarget').value)||0; let date=document.getElementById('nDate').value||'2026-12-31'; let start=Number(document.getElementById('nStart').value)||0; let m=document.getElementById('newMsg'); if(!name||code.length!==4){m.innerHTML='<div class="err">Enter Name and 4-digit Code.</div>';return} if(users.some(u=>u.code===code)){m.innerHTML='<div class="err">Code already used. Generate another.</div>';return} let tx=start?[{date:new Date().toISOString().slice(0,10),desc:'Opening Balance',type:'Credit',amount:start}]:[]; users.push({id:Date.now(),name,code,target,targetDate:date,tx}); save(); m.innerHTML='<div class="ok">'+esc(name)+' created. Code: '+esc(code)+'</div>'; setTimeout(()=>{m.innerHTML='';closeNew()},900)}
+function createUser(){let name=document.getElementById('nName').value.trim(); let code=document.getElementById('nCode').value.trim(); let target=Number(document.getElementById('nTarget').value)||0; let date=document.getElementById('nDate').value||'2026-12-31'; let start=Number(document.getElementById('nStart').value)||0; let m=document.getElementById('newMsg'); if(!name||code.length!==4){m.innerHTML='<div class="err">Enter Name and 4-digit Code.</div>';return} if(users.some(u=>u.code===code)){m.innerHTML='<div class="err">Code already used. Generate another.</div>';return} let tx=start?[{date:new Date().toISOString().slice(0,10),desc:'Opening Balance',type:'Paid',amount:start}]:[]; users.push({id:Date.now(),name,code,target,targetDate:date,tx}); save(); m.innerHTML='<div class="ok">'+esc(name)+' created. Code: '+esc(code)+'</div>'; setTimeout(()=>{m.innerHTML='';closeNew()},900)}
 function logout(){current=null; detailId=null; closeWithdraw(); closeDeleteModal(); document.getElementById('userToast').innerHTML=''; document.getElementById('adminToast').innerHTML=''; document.getElementById('userView').classList.add('hidden'); document.getElementById('adminView').classList.add('hidden'); document.getElementById('loginView').classList.remove('hidden'); document.getElementById('loginName').value=''; document.getElementById('loginCode').value=''}
 </script>
 </body>
