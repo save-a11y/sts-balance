@@ -41,9 +41,15 @@ input:focus{border-color:var(--blue);box-shadow:0 0 0 4px rgba(37,99,235,.15)}
 .target-badge{display:inline-flex;align-items:center;gap:5px;color:#FED7AA;font-weight:700}
 .grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin:14px 0}@media(max-width:700px){.grid{grid-template-columns:1fr}}
 table{width:100%;border-collapse:collapse;font-size:14px}th{text-align:left;padding:10px;color:var(--muted)}td{padding:11px 10px;border-top:1px solid var(--border)}
+tr.tx-row{cursor:pointer;transition:background .15s}tr.tx-row:hover{background:rgba(37,99,235,.06)}
 .pill{padding:5px 10px;border-radius:999px;font-weight:800;font-size:12px}.paid{background:#DCFCE7;color:#15803D}.debit{background:#FFEDD5;color:#C2410C}
 .userrow{display:flex;justify-content:space-between;align-items:center;padding:14px;border:1px solid var(--border);border-radius:16px;margin-bottom:10px;background:var(--card);cursor:pointer}
 .userrow:hover{border-color:var(--blue2)}
+.search-wrap{position:relative;margin-bottom:12px}
+.search-wrap svg.search-ico{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+.search-wrap input{padding-left:38px;padding-right:36px}
+.clear-btn{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;color:var(--muted);padding:4px;display:grid;place-items:center}
+.clear-btn:hover{color:var(--text)}
 .avatar{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--orange));color:#fff;display:grid;place-items:center;font-weight:900;flex-shrink:0;overflow:hidden}
 .avatar img{width:100%;height:100%;object-fit:cover}
 .user-header{display:flex;flex-wrap:wrap;align-items:center;gap:16px;margin-bottom:18px}
@@ -56,6 +62,10 @@ table{width:100%;border-collapse:collapse;font-size:14px}th{text-align:left;padd
 .photo-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:4px}
 .mini-btn{font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;background:var(--card);border:1px solid var(--border);color:var(--text)}
 .mini-btn:hover{border-color:var(--blue2)}
+.bank-box{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:14px;border-radius:16px;border:1px solid var(--border);background:var(--bg);margin-top:12px}@media(max-width:650px){.bank-box{grid-template-columns:1fr}}
+.bank-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+.copy-num-btn{display:inline-flex;align-items:center;gap:6px;background:var(--blue);color:#fff;font-size:12px;font-weight:800;padding:6px 12px;border-radius:10px;margin-top:6px}
+.copy-num-btn:hover{background:var(--blue2)}
 .flex{display:flex;gap:10px;align-items:center}.danger{background:#DC2626;color:#fff;padding:11px 16px;border-radius:12px;font-weight:800}.ghost{background:var(--card);border:1px solid var(--border);color:var(--text);padding:11px 16px;border-radius:12px;font-weight:700}
 .modal-bg{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:16px}
 .modal-card{width:100%;max-width:420px;background:var(--card);border:1px solid var(--border);border-radius:24px;padding:24px;box-shadow:0 24px 50px rgba(0,0,0,.25)}
@@ -120,6 +130,35 @@ footer{text-align:center;padding:22px;color:var(--blue);font-weight:800}body.dar
 <div class="prog-row"><span id="uProg"></span><span id="uReachedBadge" class="target-badge hidden"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg> Target reached — ready to withdraw</span></div>
 </div>
 <div class="grid"><div class="card"><b>Target Amount</b><div id="uTarget" style="font-size:22px;font-weight:900;margin-top:6px"></div></div><div class="card"><b>Target Date</b><div id="uDate" style="font-size:22px;font-weight:900;margin-top:6px"></div></div><div class="card"><b>Days Remaining</b><div id="uDays" style="font-size:22px;font-weight:900;margin-top:6px"></div></div></div>
+<div class="card" style="margin-bottom:14px">
+<div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px">
+<div class="flex">
+<div style="width:36px;height:36px;border-radius:50%;background:#FFEDD5;color:#C2410C;display:grid;place-items:center;flex-shrink:0">
+<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><line x1="3" x2="21" y1="22" y2="22"/><line x1="6" x2="6" y1="18" y2="11"/><line x1="10" x2="10" y1="18" y2="11"/><line x1="14" x2="14" y1="18" y2="11"/><line x1="18" x2="18" y1="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg>
+</div>
+<div>
+<h3 style="font-size:16px;font-weight:800;line-height:1.2">Transfer / Deposit Account</h3>
+<p style="font-size:12px;color:var(--muted)">Copy details below to make a bank transfer</p>
+</div>
+</div>
+<button type="button" id="copyAllBtn" class="ghost" style="padding:7px 12px;font-size:12px;border-radius:10px" onclick="copyBank('all')">Copy All</button>
+</div>
+<div class="bank-box">
+<div>
+<div class="bank-lbl">Account Number</div>
+<div style="font-size:20px;font-weight:900;letter-spacing:.5px;margin-top:2px;user-select:all">2150445461</div>
+<button type="button" id="copyNumBtn" class="copy-num-btn" onclick="copyBank('number')">Copy</button>
+</div>
+<div>
+<div class="bank-lbl">Account Name</div>
+<div style="font-size:16px;font-weight:800;margin-top:2px">Stephen Stanley</div>
+</div>
+<div>
+<div class="bank-lbl">Bank Name</div>
+<div style="font-size:16px;font-weight:800;margin-top:2px">UBA Bank</div>
+</div>
+</div>
+</div>
 <div class="card"><h3>History</h3><div style="overflow:auto"><table><thead><tr><th>Date</th><th>Description</th><th>Status</th><th>Amount</th></tr></thead><tbody id="uHist"></tbody></table></div><button class="btn btn-blue" style="max-width:220px" onclick="logout()">Log Out</button></div>
 </div>
 
@@ -128,6 +167,14 @@ footer{text-align:center;padding:22px;color:var(--blue);font-weight:800}body.dar
 <p class="sub">Manage all savings. Create new savings, add transactions, delete from detail view.</p>
 <div style="display:flex;gap:10px;flex-wrap:wrap;margin:14px 0"><button class="btn" style="width:auto;margin:0" onclick="openNew()">+ New Savings</button><button class="ghost" onclick="logout()">Exit Admin</button></div>
 <div id="adminToast"></div>
+<div id="adminSummary"></div>
+<div id="adminSearchWrap" class="search-wrap hidden">
+<svg class="search-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+<input id="adminSearch" placeholder="Filter users by name..." aria-label="Filter users by name" oninput="renderAdminRows()">
+<button type="button" id="clearSearchBtn" class="clear-btn hidden" onclick="clearAdminSearch()" aria-label="Clear search">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+</button>
+</div>
 <div id="adminList"></div>
 <div id="adminDetail" class="hidden"></div>
 <div id="newForm" class="card hidden">
@@ -174,6 +221,28 @@ footer{text-align:center;padding:22px;color:var(--blue);font-weight:800}body.dar
 </div>
 </div>
 
+<div id="editTxModal" class="modal-bg hidden">
+<div class="modal-card" role="dialog" aria-modal="true">
+<div style="display:flex;align-items:center;gap:10px">
+<div style="width:40px;height:40px;border-radius:50%;background:#DBEAFE;color:#1E40AF;display:grid;place-items:center;flex-shrink:0">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+</div>
+<div>
+<h3 style="font-size:20px;font-weight:800">Edit Transaction</h3>
+<p id="eTxUser" style="font-size:12px;color:var(--muted)"></p>
+</div>
+</div>
+<label>Date</label><input id="eTxDate" type="date">
+<label>Description</label><input id="eTxDesc" placeholder="Transaction description">
+<label>Amount (₦)</label><input id="eTxAmt" type="number" min="1" placeholder="Enter amount">
+<div id="eTxErr"></div>
+<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px">
+<button type="button" class="ghost" onclick="closeEditTx()">Cancel</button>
+<button type="button" class="btn" style="width:auto;margin:0;padding:11px 18px" onclick="saveEditTx()">Save Changes</button>
+</div>
+</div>
+</div>
+
 <footer>uninestnigeria.com.ng</footer>
 <script>
 let users = JSON.parse(localStorage.getItem('sts_users')||'null') || [
@@ -181,7 +250,7 @@ let users = JSON.parse(localStorage.getItem('sts_users')||'null') || [
 {id:2,name:'Chidi',code:'7710',target:300000,targetDate:'2026-12-31',tx:[{date:'2026-09-10',desc:'Opening Balance',type:'Paid',amount:80000},{date:'2026-10-12',desc:'Monthly Savings',type:'Paid',amount:40000}]},
 {id:3,name:'Funmi',code:'9305',target:750000,targetDate:'2027-03-31',tx:[{date:'2026-08-20',desc:'Opening Balance',type:'Paid',amount:200000}]}
 ];
-let current=null, detailId=null, toastTimer=null, userToastTimer=null;
+let current=null, detailId=null, editTxIdx=null, toastTimer=null, userToastTimer=null;
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function save(){try{localStorage.setItem('sts_users',JSON.stringify(users))}catch(e){}}
 function fmt(n){return '₦'+Number(n).toLocaleString()}
@@ -192,6 +261,26 @@ if(localStorage.getItem('sts_theme')==='dark') toggleTheme();
 function showTab(id,btn){document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.getElementById('howBox').classList.toggle('hidden',id!=='how');document.getElementById('aboutBox').classList.toggle('hidden',id!=='about')}
 function showAdminToast(text,ok){let el=document.getElementById('adminToast');el.innerHTML='<div class="'+(ok?'ok':'err')+'">'+esc(text)+'</div>';clearTimeout(toastTimer);toastTimer=setTimeout(()=>{el.innerHTML=''},3200)}
 function showUserToast(text,ok){let el=document.getElementById('userToast');el.innerHTML='<div class="'+(ok?'ok':'err')+'">'+esc(text)+'</div>';clearTimeout(userToastTimer);userToastTimer=setTimeout(()=>{el.innerHTML=''},3200)}
+let copyTimer=null;
+function copyTextSafe(txt){
+if(navigator.clipboard && window.isSecureContext){return navigator.clipboard.writeText(txt).then(()=>true).catch(()=>fallbackCopy(txt))}
+return Promise.resolve(fallbackCopy(txt));
+}
+function fallbackCopy(txt){
+try{let ta=document.createElement('textarea');ta.value=txt;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.focus();ta.select();let ok=document.execCommand('copy');document.body.removeChild(ta);return ok}catch(e){return false}
+}
+function copyBank(mode){
+let txt=mode==='number'?'2150445461':'2150445461\nStephen Stanley\nUBA Bank';
+copyTextSafe(txt).then(ok=>{
+if(!ok){showUserToast('Could not copy automatically. Please copy manually.',false);return}
+let nb=document.getElementById('copyNumBtn'), ab=document.getElementById('copyAllBtn');
+if(mode==='number'&&nb){nb.textContent='✓ Copied';}
+if(mode==='all'&&ab){ab.textContent='✓ Copied All';}
+clearTimeout(copyTimer);
+copyTimer=setTimeout(()=>{if(nb)nb.textContent='Copy'; if(ab)ab.textContent='Copy All';},2200);
+showUserToast(mode==='number'?'Account number copied: 2150445461':'Bank account details copied.',true);
+});
+}
 function login(){
 let name=document.getElementById('loginName').value.trim(); let code=document.getElementById('loginCode').value.trim(); let msg=document.getElementById('loginMsg');
 if(name.toLowerCase()==='admin' && code.toLowerCase()==='gospel'){msg.innerHTML='';showAdmin();return}
@@ -270,28 +359,63 @@ save(); closeWithdraw(); renderUser(); showUserToast('Withdrawal of '+fmt(amt)+'
 }
 function showAdmin(){document.getElementById('loginView').classList.add('hidden'); document.getElementById('adminView').classList.remove('hidden'); renderAdminList()}
 function renderAdminList(){
+closeEditTx();
 document.getElementById('adminDetail').classList.add('hidden');
 document.getElementById('newForm').classList.add('hidden');
 let total=users.reduce((s,u)=>s+bal(u),0);
-let summary='<div class="balance" style="border-radius:18px;padding:16px 20px;margin-bottom:12px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px"><div><div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;opacity:.85">Total Balance (All Users)</div><div style="font-size:30px;font-weight:900;margin-top:2px">'+fmt(total)+'</div></div><div style="background:rgba(255,255,255,.15);padding:6px 12px;border-radius:999px;font-size:12px;font-weight:700">'+users.length+' '+(users.length===1?'User':'Users')+'</div></div>';
-document.getElementById('adminList').innerHTML=summary+users.map(u=>'<div class="userrow" onclick="openDetail('+u.id+')"><div class="flex"><div class="avatar">'+renderAvatarHtml(u)+'</div><div><b>'+esc(u.name)+' • '+esc(u.code)+'</b><div style="color:var(--muted);font-size:13px">Target '+esc(u.targetDate)+' • '+daysLeft(u.targetDate)+' days remaining</div></div></div><div><b>'+fmt(bal(u))+'</b> <span style="color:var(--orange)">→</span></div></div>').join('');
+document.getElementById('adminSummary').innerHTML='<div class="balance" style="border-radius:18px;padding:16px 20px;margin-bottom:12px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px"><div><div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;opacity:.85">Total Balance (All Users)</div><div style="font-size:30px;font-weight:900;margin-top:2px">'+fmt(total)+'</div></div><div style="background:rgba(255,255,255,.15);padding:6px 12px;border-radius:999px;font-size:12px;font-weight:700">'+users.length+' '+(users.length===1?'User':'Users')+'</div></div>';
+document.getElementById('adminSearchWrap').classList.remove('hidden');
+renderAdminRows();
+}
+function clearAdminSearch(){document.getElementById('adminSearch').value=''; renderAdminRows();}
+function renderAdminRows(){
+let raw=(document.getElementById('adminSearch').value||'').trim();
+let q=raw.toLowerCase();
+document.getElementById('clearSearchBtn').classList.toggle('hidden',!raw);
+let list=q?users.filter(u=>u.name.toLowerCase().includes(q)):users;
+document.getElementById('adminList').innerHTML=list.length?list.map(u=>'<div class="userrow" onclick="openDetail('+u.id+')"><div class="flex"><div class="avatar">'+renderAvatarHtml(u)+'</div><div><b>'+esc(u.name)+' • '+esc(u.code)+'</b><div style="color:var(--muted);font-size:13px">Target '+esc(u.targetDate)+' • '+daysLeft(u.targetDate)+' days remaining</div></div></div><div><b>'+fmt(bal(u))+'</b> <span style="color:var(--orange)">→</span></div></div>').join(''):'<div class="card" style="text-align:center;color:var(--muted);font-weight:600">'+(q?'No savings accounts found matching &quot;'+esc(raw)+'&quot;.':'No savings accounts yet.')+'</div>';
 }
 function openDetail(id){
-detailId=id; let u=users.find(x=>x.id===id); if(!u)return;
+detailId=id; closeEditTx(); let u=users.find(x=>x.id===id); if(!u)return;
+document.getElementById('adminSummary').innerHTML='';
+document.getElementById('adminSearchWrap').classList.add('hidden');
 document.getElementById('adminList').innerHTML='';
 let d=document.getElementById('adminDetail'); d.classList.remove('hidden');
-d.innerHTML='<div class="card"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center"><div class="flex"><div class="avatar" style="width:52px;height:52px;font-size:18px">'+renderAvatarHtml(u)+'</div><div><h2>'+esc(u.name)+' • '+esc(u.code)+'</h2><p style="color:var(--muted)">Target '+esc(u.targetDate)+' • '+daysLeft(u.targetDate)+' days remaining</p></div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="ghost" onclick="copyCode()">Copy User Link / Code</button><button class="danger" onclick="askDelete()">🗑 Delete</button></div></div><div class="balance" style="margin-top:14px"><h2>Current Balance</h2><div class="big">'+fmt(bal(u))+'</div><p>Target '+fmt(u.target)+'</p></div><div style="display:flex;align-items:center;gap:8px;margin:16px 0 8px"><h3>Add Transaction</h3><span class="pill paid">Paid</span></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px"><input id="tDate" type="date" value="'+new Date().toISOString().slice(0,10)+'"><input id="tDesc" placeholder="Description"><input id="tAmt" type="number" placeholder="Amount"></div><div id="txErr"></div><button class="btn" onclick="addTx()">Add Transaction</button><h3 style="margin:16px 0 8px">History</h3><div style="overflow:auto"><table><thead><tr><th>Date</th><th>Description</th><th>Status</th><th>Amount</th></tr></thead><tbody>'+u.tx.map(t=>{let w=!!(t.withdraw||t.type==='Debit');return '<tr><td>'+esc(t.date)+'</td><td>'+esc(t.desc)+'</td><td><span class="pill '+(w?'debit':'paid')+'">Paid</span></td><td>'+(w?'-':'')+fmt(t.amount)+'</td></tr>'}).join('')+'</tbody></table></div><button class="ghost" style="margin-top:14px" onclick="renderAdminList()">← Back to List</button></div>';
+d.innerHTML='<div class="card"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center"><div class="flex"><div class="avatar" style="width:52px;height:52px;font-size:18px">'+renderAvatarHtml(u)+'</div><div><h2>'+esc(u.name)+' • '+esc(u.code)+'</h2><p style="color:var(--muted)">Target '+esc(u.targetDate)+' • '+daysLeft(u.targetDate)+' days remaining</p></div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="ghost" onclick="copyCode()">Copy User Link / Code</button><button class="danger" onclick="askDelete()">🗑 Delete</button></div></div><div class="balance" style="margin-top:14px"><h2>Current Balance</h2><div class="big">'+fmt(bal(u))+'</div><p>Target '+fmt(u.target)+'</p></div><div style="display:flex;align-items:center;gap:8px;margin:16px 0 8px"><h3>Add Transaction</h3><span class="pill paid">Paid</span></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px"><input id="tDate" type="date" value="'+new Date().toISOString().slice(0,10)+'"><input id="tDesc" placeholder="Description"><input id="tAmt" type="number" placeholder="Amount"></div><div id="txErr"></div><button class="btn" onclick="addTx()">Add Transaction</button><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:16px 0 8px"><h3>History</h3><span style="font-size:12px;font-weight:600;color:var(--muted)">Click any row to edit</span></div><div style="overflow:auto"><table><thead><tr><th>Date</th><th>Description</th><th>Status</th><th>Amount</th><th></th></tr></thead><tbody>'+u.tx.map((t,i)=>{let w=!!(t.withdraw||t.type==='Debit');return '<tr class="tx-row" onclick="openEditTx('+i+')" title="Click to edit transaction"><td>'+esc(t.date)+'</td><td>'+esc(t.desc)+'</td><td><span class="pill '+(w?'debit':'paid')+'">Paid</span></td><td>'+(w?'-':'')+fmt(t.amount)+'</td><td style="text-align:right;color:var(--muted)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></td></tr>'}).join('')+'</tbody></table></div><button class="ghost" style="margin-top:14px" onclick="renderAdminList()">← Back to List</button></div>';
+}
+function openEditTx(idx){
+let u=users.find(x=>x.id===detailId); if(!u||!u.tx[idx])return;
+editTxIdx=idx;
+let t=u.tx[idx];
+document.getElementById('eTxUser').textContent=u.name;
+document.getElementById('eTxDate').value=t.date||'';
+document.getElementById('eTxDesc').value=t.desc||'';
+document.getElementById('eTxAmt').value=t.amount;
+document.getElementById('eTxErr').innerHTML='';
+document.getElementById('editTxModal').classList.remove('hidden');
+}
+function closeEditTx(){editTxIdx=null; let m=document.getElementById('editTxModal'); if(m)m.classList.add('hidden')}
+function saveEditTx(){
+let u=users.find(x=>x.id===detailId); if(!u||editTxIdx===null||!u.tx[editTxIdx])return;
+let amt=Number(document.getElementById('eTxAmt').value);
+let err=document.getElementById('eTxErr');
+if(!amt||amt<=0){err.innerHTML='<div class="err">Enter a valid amount greater than 0.</div>';return}
+let t=u.tx[editTxIdx];
+t.date=document.getElementById('eTxDate').value||t.date||new Date().toISOString().slice(0,10);
+t.desc=document.getElementById('eTxDesc').value.trim()||'Transaction';
+t.amount=amt;
+save(); closeEditTx(); openDetail(detailId); showAdminToast('Transaction updated.',true);
 }
 function copyCode(){let u=users.find(x=>x.id===detailId); if(!u)return; let txt='Name: '+u.name+' Code: '+u.code; if(navigator.clipboard) navigator.clipboard.writeText(txt).catch(()=>{}); showAdminToast('Copied: '+txt,true)}
 function addTx(){let u=users.find(x=>x.id===detailId); if(!u)return; let amt=Number(document.getElementById('tAmt').value); let err=document.getElementById('txErr'); if(!amt||amt<=0){err.innerHTML='<div class="err">Enter amount</div>';return} err.innerHTML=''; u.tx.push({date:document.getElementById('tDate').value||new Date().toISOString().slice(0,10),desc:document.getElementById('tDesc').value||'Transaction',type:'Paid',amount:amt}); save(); openDetail(detailId); showAdminToast('Paid '+fmt(amt)+' added.',true)}
 function askDelete(){let u=users.find(x=>x.id===detailId); if(!u)return; document.getElementById('delTitle').textContent='Delete '+u.name+'?'; document.getElementById('deleteModal').classList.remove('hidden')}
 function closeDeleteModal(){document.getElementById('deleteModal').classList.add('hidden')}
 function confirmDelete(){let u=users.find(x=>x.id===detailId); closeDeleteModal(); if(!u)return; let name=u.name; users=users.filter(x=>x.id!==detailId); detailId=null; save(); renderAdminList(); showAdminToast(name+' deleted',true)}
-function openNew(){document.getElementById('newForm').classList.remove('hidden'); document.getElementById('adminList').innerHTML=''; document.getElementById('adminDetail').classList.add('hidden')}
+function openNew(){closeEditTx(); document.getElementById('newForm').classList.remove('hidden'); document.getElementById('adminSummary').innerHTML=''; document.getElementById('adminSearchWrap').classList.add('hidden'); document.getElementById('adminList').innerHTML=''; document.getElementById('adminDetail').classList.add('hidden')}
 function closeNew(){document.getElementById('newForm').classList.add('hidden'); renderAdminList()}
 function genCode(){let c=''; do{c=String(Math.floor(1000+Math.random()*9000))}while(users.some(u=>u.code===c)); document.getElementById('nCode').value=c}
 function createUser(){let name=document.getElementById('nName').value.trim(); let code=document.getElementById('nCode').value.trim(); let target=Number(document.getElementById('nTarget').value)||0; let date=document.getElementById('nDate').value||'2026-12-31'; let start=Number(document.getElementById('nStart').value)||0; let m=document.getElementById('newMsg'); if(!name||code.length!==4){m.innerHTML='<div class="err">Enter Name and 4-digit Code.</div>';return} if(users.some(u=>u.code===code)){m.innerHTML='<div class="err">Code already used. Generate another.</div>';return} let tx=start?[{date:new Date().toISOString().slice(0,10),desc:'Opening Balance',type:'Paid',amount:start}]:[]; users.push({id:Date.now(),name,code,target,targetDate:date,tx}); save(); m.innerHTML='<div class="ok">'+esc(name)+' created. Code: '+esc(code)+'</div>'; setTimeout(()=>{m.innerHTML='';closeNew()},900)}
-function logout(){current=null; detailId=null; closeWithdraw(); closeDeleteModal(); document.getElementById('userToast').innerHTML=''; document.getElementById('adminToast').innerHTML=''; document.getElementById('userView').classList.add('hidden'); document.getElementById('adminView').classList.add('hidden'); document.getElementById('loginView').classList.remove('hidden'); document.getElementById('loginName').value=''; document.getElementById('loginCode').value=''}
+function logout(){current=null; detailId=null; closeWithdraw(); closeDeleteModal(); closeEditTx(); document.getElementById('adminSearch').value=''; document.getElementById('adminSummary').innerHTML=''; document.getElementById('adminSearchWrap').classList.add('hidden'); document.getElementById('userToast').innerHTML=''; document.getElementById('adminToast').innerHTML=''; document.getElementById('userView').classList.add('hidden'); document.getElementById('adminView').classList.add('hidden'); document.getElementById('loginView').classList.remove('hidden'); document.getElementById('loginName').value=''; document.getElementById('loginCode').value=''}
 </script>
 </body>
 </html>
