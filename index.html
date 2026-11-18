@@ -535,14 +535,7 @@ function renderCloudSyncBox() {
   if (!box) return;
   const host = window.location.hostname;
   if (isCloudAdmin()) {
-    box.innerHTML =
-      '<div class="sync-box on"><div><div style="font-weight:800;font-size:14px">Online Cloud Sync Active (' +
-      esc(fbUser.email) +
-      ')</div><div style="font-size:12px;margin-top:2px">' +
-      (cloudSynced
-        ? 'Accounts &amp; transactions sync live so users can log in on any phone.'
-        : 'Connecting to cloud database...') +
-      '</div></div><button type="button" class="ghost" style="padding:8px 12px;font-size:12px" onclick="adminGoogleSignOut()">Disconnect</button></div>';
+    box.innerHTML = '';
   } else {
     box.innerHTML =
       '<div class="sync-box off"><div><div style="font-weight:800;font-size:14px">Online Cloud Sync Not Connected</div><div style="font-size:12px;margin-top:2px">Sign in with Google (' +
