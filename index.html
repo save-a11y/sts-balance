@@ -72,6 +72,13 @@ tr.tx-row{cursor:pointer;transition:background .15s}tr.tx-row:hover{background:r
 .modal-card{width:100%;max-width:420px;background:var(--card);border:1px solid var(--border);border-radius:24px;padding:24px;box-shadow:0 24px 50px rgba(0,0,0,.25)}
 footer{text-align:center;padding:22px;color:var(--blue);font-weight:800}body.dark footer{color:#93C5FD}
 .hidden{display:none!important}.err{background:#FEF2F2;color:#B91C1C;padding:12px;border-radius:12px;margin:12px 0;font-weight:700;font-size:14px}.ok{background:#ECFDF5;color:#065F46;padding:12px;border-radius:12px;margin:12px 0;font-weight:700;font-size:14px}
+.sync-box{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-radius:18px;border:1px solid var(--border);margin-bottom:12px}
+.sync-box.on{background:#ECFDF5;border-color:#A7F3D0;color:#065F46}
+.sync-box.off{background:#FFFBEB;border-color:#FDE68A;color:#92400E}
+body.dark .sync-box.on{background:rgba(6,78,59,.35);border-color:rgba(16,185,129,.4);color:#A7F3D0}
+body.dark .sync-box.off{background:rgba(120,53,15,.35);border-color:rgba(245,158,11,.4);color:#FDE68A}
+.sync-btn{background:var(--blue);color:#fff;padding:9px 14px;border-radius:10px;font-weight:800;font-size:12px}
+.sync-btn:hover{background:var(--blue2)}
 </style>
 </head>
 <body>
@@ -83,9 +90,9 @@ footer{text-align:center;padding:22px;color:var(--blue);font-weight:800}body.dar
 <h1><span class="h1b">Welcome back</span><br><span class="h1o">Enter your code</span><br><span class="h1b">and see your balance</span></h1>
 <p class="sub">Enter your name and code to see your balance.</p>
 <div class="card">
-<label>Your Name</label><input id="loginName" placeholder="Your Name" autocomplete="off">
-<label>Your Code</label><input id="loginCode" placeholder="Your Code" autocomplete="off">
-<button class="btn" onclick="login()">See My Balance</button>
+<label>Your Name</label><input id="loginName" placeholder="Your Name" autocomplete="off" onkeydown="if(event.key==='Enter')login()">
+<label>Your Code</label><input id="loginCode" placeholder="Your Code" autocomplete="off" onkeydown="if(event.key==='Enter')login()">
+<button id="loginBtn" class="btn" onclick="login()">See My Balance</button>
 <div id="loginMsg"></div>
 </div>
 </div>
@@ -166,6 +173,8 @@ footer{text-align:center;padding:22px;color:var(--blue);font-weight:800}body.dar
 <div id="adminView" class="hidden">
 <h1 style="font-size:36px"><span class="h1b">Welcome back,</span> <span class="h1o">Admin</span> <span style="font-size:14px;background:var(--orange);color:#fff;padding:5px 10px;border-radius:999px;vertical-align:middle">ADMIN</span></h1>
 <p class="sub">Manage all savings. Create new savings, add transactions, delete from detail view.</p>
+<div id="cloudSyncBox"></div>
+<div id="cloudErrBox"></div>
 <div style="display:flex;gap:10px;flex-wrap:wrap;margin:14px 0"><button class="btn" style="width:auto;margin:0" onclick="openNew()">+ New Savings</button><button class="ghost" onclick="logout()">Exit Admin</button></div>
 <div id="adminToast"></div>
 <div id="adminSummary"></div>
@@ -245,178 +254,868 @@ footer{text-align:center;padding:22px;color:var(--blue);font-weight:800}body.dar
 </div>
 
 <footer>uninestnigeria.com.ng</footer>
-<script>
-let users = JSON.parse(localStorage.getItem('sts_users')||'null') || [
-{id:1,name:'Ada',code:'4821',target:500000,targetDate:'2026-09-30',tx:[{date:'2026-09-01',desc:'Opening Balance',type:'Paid',amount:120000},{date:'2026-10-05',desc:'Monthly Savings',type:'Paid',amount:50000},{date:'2026-11-02',desc:'Top-up Savings',type:'Paid',amount:30000}]},
-{id:2,name:'Chidi',code:'7710',target:300000,targetDate:'2026-12-31',tx:[{date:'2026-09-10',desc:'Opening Balance',type:'Paid',amount:80000},{date:'2026-10-12',desc:'Monthly Savings',type:'Paid',amount:40000}]},
-{id:3,name:'Funmi',code:'9305',target:750000,targetDate:'2027-03-31',tx:[{date:'2026-08-20',desc:'Opening Balance',type:'Paid',amount:200000}]}
-];
-let current=null, detailId=null, editTxIdx=null, toastTimer=null, userToastTimer=null;
-function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
-function save(){try{localStorage.setItem('sts_users',JSON.stringify(users))}catch(e){}}
-function fmt(n){return '₦'+Number(n).toLocaleString()}
-function bal(u){return u.tx.reduce((s,t)=>s+((t.withdraw||t.type==='Debit')?-t.amount:t.amount),0)}
-function daysLeft(d){return Math.max(0,Math.ceil((new Date(d)-new Date())/(1000*60*60*24)))}
-function toggleTheme(){document.body.classList.toggle('dark');let d=document.body.classList.contains('dark');localStorage.setItem('sts_theme',d?'dark':'light');document.getElementById('themeBtn').textContent=d?'☀️ White':'🌙 Dark'}
-if(localStorage.getItem('sts_theme')==='dark') toggleTheme();
-function showTab(id,btn){document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.getElementById('howBox').classList.toggle('hidden',id!=='how');document.getElementById('aboutBox').classList.toggle('hidden',id!=='about')}
-function showAdminToast(text,ok){let el=document.getElementById('adminToast');el.innerHTML='<div class="'+(ok?'ok':'err')+'">'+esc(text)+'</div>';clearTimeout(toastTimer);toastTimer=setTimeout(()=>{el.innerHTML=''},3200)}
-function showUserToast(text,ok){let el=document.getElementById('userToast');el.innerHTML='<div class="'+(ok?'ok':'err')+'">'+esc(text)+'</div>';clearTimeout(userToastTimer);userToastTimer=setTimeout(()=>{el.innerHTML=''},3200)}
-let copyTimer=null;
-function copyTextSafe(txt){
-if(navigator.clipboard && window.isSecureContext){return navigator.clipboard.writeText(txt).then(()=>true).catch(()=>fallbackCopy(txt))}
-return Promise.resolve(fallbackCopy(txt));
-}
-function fallbackCopy(txt){
-try{let ta=document.createElement('textarea');ta.value=txt;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.focus();ta.select();let ok=document.execCommand('copy');document.body.removeChild(ta);return ok}catch(e){return false}
-}
-function copyBank(mode){
-let txt=mode==='number'?'2150445461':'2150445461\nStephen Stanley\nUBA Bank';
-copyTextSafe(txt).then(ok=>{
-if(!ok){showUserToast('Could not copy automatically. Please copy manually.',false);return}
-let nb=document.getElementById('copyNumBtn'), ab=document.getElementById('copyAllBtn');
-if(mode==='number'&&nb){nb.textContent='✓ Copied';}
-if(mode==='all'&&ab){ab.textContent='✓ Copied All';}
-clearTimeout(copyTimer);
-copyTimer=setTimeout(()=>{if(nb)nb.textContent='Copy'; if(ab)ab.textContent='Copy All';},2200);
-showUserToast(mode==='number'?'Account number copied: 2150445461':'Bank account details copied.',true);
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js';
+import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js';
+import {
+  collection,
+  deleteDoc,
+  deleteField,
+  doc,
+  getDoc,
+  getDocFromServer,
+  getFirestore,
+  onSnapshot,
+  serverTimestamp,
+  setDoc,
+  updateDoc
+} from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js';
+
+const ADMIN_EMAIL = 'amaechihellis@gmail.com';
+const firebaseConfig = {
+  projectId: 'basic-cistern-914dk',
+  appId: '1:617616121829:web:0fca7983ec515e828f190c',
+  apiKey: 'AIzaSyAtmtrMx1hEMGMeERAKaO4C6agWW3sdIVY',
+  authDomain: 'basic-cistern-914dk.firebaseapp.com',
+  firestoreDatabaseId: 'ai-studio-stsbalance-dfbc7cec-1fb9-4101-9b7d-2b1f66b9dfb3',
+  storageBucket: 'basic-cistern-914dk.firebasestorage.app',
+  messagingSenderId: '617616121829'
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+const auth = getAuth(app);
+const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: 'select_account' });
+
+getDocFromServer(doc(db, 'test', 'connection')).catch((error) => {
+  if (error && error.message && error.message.includes('the client is offline')) {
+    console.error('Please check your Firebase configuration.');
+  }
 });
+
+function handleFirestoreError(error, operationType, path) {
+  const errInfo = {
+    error: error && error.message ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser ? auth.currentUser.uid : null,
+      email: auth.currentUser ? auth.currentUser.email : null,
+      emailVerified: auth.currentUser ? auth.currentUser.emailVerified : null,
+      isAnonymous: auth.currentUser ? auth.currentUser.isAnonymous : null,
+      tenantId: auth.currentUser ? auth.currentUser.tenantId : null,
+      providerInfo: (auth.currentUser && auth.currentUser.providerData ? auth.currentUser.providerData : []).map((p) => ({
+        providerId: p.providerId,
+        email: p.email
+      }))
+    },
+    operationType,
+    path
+  };
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
 }
-function login(){
-let name=document.getElementById('loginName').value.trim(); let code=document.getElementById('loginCode').value.trim(); let msg=document.getElementById('loginMsg');
-if(name.toLowerCase()==='admin' && code.toLowerCase()==='gospel'){msg.innerHTML='';showAdmin();return}
-let u=users.find(x=>x.name.toLowerCase()===name.toLowerCase() && x.code===code);
-if(!u){msg.innerHTML='<div class="err">Name and code do not match. Please try again.</div>';return}
-msg.innerHTML=''; current=u; document.getElementById('loginView').classList.add('hidden'); document.getElementById('userView').classList.remove('hidden'); renderUser();
+
+function makeAccountId(name, code) {
+  const slug = String(name || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 100) || 'user';
+  return slug + '_' + String(code || '').trim();
 }
-function renderAvatarHtml(u){if(u.avatar){return '<img src="'+u.avatar+'" alt="'+esc(u.name)+'">'}return esc((u.name[0]||'?').toUpperCase())}
-function renderUser(){
-let u=current; if(!u)return;
-document.getElementById('welcomeName').textContent=u.name;
-document.getElementById('welcomeCode').textContent=u.name+' • '+u.code;
-let av=document.getElementById('userAvatar');
-av.className='avatar-lg'+(u.avatar?' has-img':'');
-av.innerHTML=renderAvatarHtml(u);
-document.getElementById('photoBtn').textContent=u.avatar?'Change Photo':'+ Add Photo';
-document.getElementById('removePhotoBtn').classList.toggle('hidden',!u.avatar);
-let b=bal(u);
-document.getElementById('uBal').textContent=fmt(b);
-document.getElementById('uTarget').textContent=fmt(u.target);
-document.getElementById('uDate').textContent=u.targetDate;
-document.getElementById('uDays').textContent=daysLeft(u.targetDate)+' days';
-let p=u.target>0?Math.min(100,Math.max(0,Math.round(b/u.target*100))):0;
-document.getElementById('uFill').style.width=p+'%';
-document.getElementById('uProg').textContent=p+'% of target';
-document.getElementById('uTargetLine').textContent='Target: '+fmt(u.target)+' • '+u.targetDate;
-let reached=u.target>0 && b>=u.target;
-document.getElementById('withdrawBtn').classList.toggle('hidden',!reached);
-document.getElementById('uReachedBadge').classList.toggle('hidden',!reached);
-document.getElementById('uHist').innerHTML=u.tx.map(t=>{let w=!!(t.withdraw||t.type==='Debit');return '<tr><td>'+esc(t.date)+'</td><td>'+esc(t.desc)+'</td><td><span class="pill '+(w?'debit':'paid')+'">Paid</span></td><td>'+(w?'-':'')+fmt(t.amount)+'</td></tr>'}).join('');
+
+function todayISO() {
+  return new Date().toISOString().slice(0, 10);
 }
-function pickAvatar(){document.getElementById('avatarInput').click()}
-function handleAvatarFile(e){
-let file=e.target.files&&e.target.files[0]; e.target.value='';
-if(!file||!current)return;
-if(!file.type.startsWith('image/')){showUserToast('Please select a valid image file.',false);return}
-let reader=new FileReader();
-reader.onerror=()=>showUserToast('Could not read image file.',false);
-reader.onload=function(){
-let img=new Image();
-img.onerror=()=>showUserToast('Invalid image file.',false);
-img.onload=function(){
-let max=256, scale=Math.min(1,max/Math.max(img.width,img.height));
-let w=Math.max(1,Math.round(img.width*scale)), h=Math.max(1,Math.round(img.height*scale));
-let c=document.createElement('canvas'); c.width=w; c.height=h;
-let ctx=c.getContext('2d'); ctx.drawImage(img,0,0,w,h);
-current.avatar=c.toDataURL('image/jpeg',0.82);
-save(); renderUser(); showUserToast('Profile picture updated.',true);
-};
-img.src=reader.result;
-};
-reader.readAsDataURL(file);
+
+function sanitizeTxList(txList) {
+  return (Array.isArray(txList) ? txList : []).slice(0, 500).map((t) => {
+    const item = {
+      date: String((t && t.date) || todayISO()).slice(0, 20),
+      desc: String((t && t.desc) || 'Transaction').slice(0, 120),
+      type: 'Paid',
+      amount: Math.max(1, Number(t && t.amount) || 0)
+    };
+    if (t && (t.withdraw || t.type === 'Debit')) {
+      item.withdraw = true;
+    }
+    return item;
+  });
 }
-function removeAvatar(){if(!current)return; delete current.avatar; save(); renderUser(); showUserToast('Profile picture removed.',true)}
-function openWithdraw(){
-if(!current)return;
-let b=bal(current);
-document.getElementById('wAvail').textContent='Available balance: '+fmt(b);
-document.getElementById('wAmt').value=b;
-document.getElementById('wAmt').max=b;
-document.getElementById('wNote').value='Target Withdrawal';
-document.getElementById('wErr').innerHTML='';
-document.getElementById('withdrawModal').classList.remove('hidden');
+
+function toFirestoreAccount(u) {
+  const cleanName = String((u && u.name) || 'User').trim().slice(0, 80) || 'User';
+  const payload = {
+    id: Number(u && u.id) || Date.now(),
+    name: cleanName,
+    nameLower: cleanName.toLowerCase().slice(0, 80),
+    code: String((u && u.code) || '').trim(),
+    target: Math.max(0, Number(u && u.target) || 0),
+    targetDate: String((u && u.targetDate) || '2026-12-31').slice(0, 20),
+    tx: sanitizeTxList(u && u.tx),
+    updatedAt: serverTimestamp()
+  };
+  if (u && typeof u.avatar === 'string' && u.avatar.length > 0 && u.avatar.length <= 300000) {
+    payload.avatar = u.avatar;
+  }
+  return payload;
 }
-function closeWithdraw(){document.getElementById('withdrawModal').classList.add('hidden')}
-function submitWithdraw(){
-if(!current)return;
-let b=bal(current);
-let amt=Number(document.getElementById('wAmt').value);
-let note=document.getElementById('wNote').value.trim()||'Target Withdrawal';
-let err=document.getElementById('wErr');
-if(!amt||amt<=0){err.innerHTML='<div class="err">Enter a valid withdrawal amount.</div>';return}
-if(amt>b){err.innerHTML='<div class="err">Amount cannot exceed your current balance ('+fmt(b)+').</div>';return}
-current.tx.push({date:new Date().toISOString().slice(0,10),desc:note,type:'Paid',withdraw:true,amount:amt});
-save(); closeWithdraw(); renderUser(); showUserToast('Withdrawal of '+fmt(amt)+' recorded.',true);
+
+function fromFirestoreDoc(docId, data) {
+  const d = data || {};
+  const parsed = {
+    id: Number(d.id) || Date.now(),
+    docId,
+    name: String(d.name || ''),
+    code: String(d.code || ''),
+    target: Number(d.target) || 0,
+    targetDate: String(d.targetDate || '2026-12-31'),
+    tx: Array.isArray(d.tx) ? d.tx : []
+  };
+  if (typeof d.avatar === 'string' && d.avatar.length > 0) {
+    parsed.avatar = d.avatar;
+  }
+  return parsed;
 }
-function showAdmin(){document.getElementById('loginView').classList.add('hidden'); document.getElementById('adminView').classList.remove('hidden'); renderAdminList()}
-function renderAdminList(){
-closeEditTx();
-document.getElementById('adminDetail').classList.add('hidden');
-document.getElementById('newForm').classList.add('hidden');
-let total=users.reduce((s,u)=>s+bal(u),0);
-document.getElementById('adminSummary').innerHTML='<div class="balance" style="border-radius:18px;padding:16px 20px;margin-bottom:12px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px"><div><div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;opacity:.85">Total Balance (All Users)</div><div style="font-size:30px;font-weight:900;margin-top:2px">'+fmt(total)+'</div></div><div style="background:rgba(255,255,255,.15);padding:6px 12px;border-radius:999px;font-size:12px;font-weight:700">'+users.length+' '+(users.length===1?'User':'Users')+'</div></div>';
-document.getElementById('adminSearchWrap').classList.remove('hidden');
-renderAdminRows();
+
+const DEFAULT_USERS = [
+  { id: 1, name: 'Ada', code: '4821', target: 500000, targetDate: '2026-09-30', tx: [{ date: '2026-09-01', desc: 'Opening Balance', type: 'Paid', amount: 120000 }, { date: '2026-10-05', desc: 'Monthly Savings', type: 'Paid', amount: 50000 }, { date: '2026-11-02', desc: 'Top-up Savings', type: 'Paid', amount: 30000 }] },
+  { id: 2, name: 'Chidi', code: '7710', target: 300000, targetDate: '2026-12-31', tx: [{ date: '2026-09-10', desc: 'Opening Balance', type: 'Paid', amount: 80000 }, { date: '2026-10-12', desc: 'Monthly Savings', type: 'Paid', amount: 40000 }] },
+  { id: 3, name: 'Funmi', code: '9305', target: 750000, targetDate: '2027-03-31', tx: [{ date: '2026-08-20', desc: 'Opening Balance', type: 'Paid', amount: 200000 }] }
+];
+
+let initialLocalUsers = null;
+try {
+  const rawSaved = localStorage.getItem('sts_users');
+  if (rawSaved) {
+    const parsedSaved = JSON.parse(rawSaved);
+    if (Array.isArray(parsedSaved)) initialLocalUsers = parsedSaved;
+  }
+} catch (e) {}
+
+let users = initialLocalUsers || DEFAULT_USERS.slice();
+let pendingLocalUsers = [];
+let current = null;
+let detailId = null;
+let editTxIdx = null;
+let toastTimer = null;
+let userToastTimer = null;
+let copyTimer = null;
+let fbUser = null;
+let cloudSynced = false;
+let cloudError = '';
+let authBusy = false;
+let hasMigrated = false;
+let adminUnsub = null;
+let userUnsub = null;
+
+function isCloudAdmin() {
+  return !!(fbUser && fbUser.email && fbUser.email.toLowerCase() === ADMIN_EMAIL.toLowerCase() && fbUser.emailVerified);
 }
-function clearAdminSearch(){document.getElementById('adminSearch').value=''; renderAdminRows();}
-function renderAdminRows(){
-let raw=(document.getElementById('adminSearch').value||'').trim();
-let q=raw.toLowerCase();
-document.getElementById('clearSearchBtn').classList.toggle('hidden',!raw);
-let list=q?users.filter(u=>u.name.toLowerCase().includes(q)):users;
-document.getElementById('adminList').innerHTML=list.length?list.map(u=>'<div class="userrow" onclick="openDetail('+u.id+')"><div class="flex"><div class="avatar">'+renderAvatarHtml(u)+'</div><div><b>'+esc(u.name)+' • '+esc(u.code)+'</b><div style="color:var(--muted);font-size:13px">Target '+esc(u.targetDate)+' • '+daysLeft(u.targetDate)+' days remaining</div></div></div><div><b>'+fmt(bal(u))+'</b> <span style="color:var(--orange)">→</span></div></div>').join(''):'<div class="card" style="text-align:center;color:var(--muted);font-weight:600">'+(q?'No savings accounts found matching &quot;'+esc(raw)+'&quot;.':'No savings accounts yet.')+'</div>';
+
+function esc(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
-function openDetail(id){
-detailId=id; closeEditTx(); let u=users.find(x=>x.id===id); if(!u)return;
-document.getElementById('adminSummary').innerHTML='';
-document.getElementById('adminSearchWrap').classList.add('hidden');
-document.getElementById('adminList').innerHTML='';
-let d=document.getElementById('adminDetail'); d.classList.remove('hidden');
-d.innerHTML='<div class="card"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center"><div class="flex"><div class="avatar" style="width:52px;height:52px;font-size:18px">'+renderAvatarHtml(u)+'</div><div><h2>'+esc(u.name)+' • '+esc(u.code)+'</h2><p style="color:var(--muted)">Target '+esc(u.targetDate)+' • '+daysLeft(u.targetDate)+' days remaining</p></div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="ghost" onclick="copyCode()">Copy User Link / Code</button><button class="danger" onclick="askDelete()">🗑 Delete</button></div></div><div class="balance" style="margin-top:14px"><h2>Current Balance</h2><div class="big">'+fmt(bal(u))+'</div><p>Target '+fmt(u.target)+'</p></div><div style="display:flex;align-items:center;gap:8px;margin:16px 0 8px"><h3>Add Transaction</h3><span class="pill paid">Paid</span></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px"><input id="tDate" type="date" value="'+new Date().toISOString().slice(0,10)+'"><input id="tDesc" placeholder="Description"><input id="tAmt" type="number" placeholder="Amount"></div><div id="txErr"></div><button class="btn" onclick="addTx()">Add Transaction</button><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:16px 0 8px"><h3>History</h3><span style="font-size:12px;font-weight:700;color:var(--muted)">Tap any row or Edit to update</span></div><div style="overflow:auto"><table><thead><tr><th>Date</th><th>Description</th><th>Status</th><th>Amount</th><th style="text-align:right">Action</th></tr></thead><tbody>'+u.tx.map((t,i)=>{let w=!!(t.withdraw||t.type==='Debit');return '<tr class="tx-row" onclick="openEditTx('+i+')" title="Click to edit transaction"><td style="white-space:nowrap">'+esc(t.date)+'</td><td>'+esc(t.desc)+'</td><td><span class="pill '+(w?'debit':'paid')+'">Paid</span></td><td style="white-space:nowrap;font-weight:700">'+(w?'-':'')+fmt(t.amount)+'</td><td style="text-align:right"><button type="button" class="edit-tx-btn" onclick="event.stopPropagation();openEditTx('+i+')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg> Edit</button></td></tr>'}).join('')+'</tbody></table></div><button class="ghost" style="margin-top:14px" onclick="renderAdminList()">← Back to List</button></div>';
+function save() {
+  try { localStorage.setItem('sts_users', JSON.stringify(users)); } catch (e) {}
 }
-function openEditTx(idx){
-let u=users.find(x=>x.id===detailId); if(!u||!u.tx[idx])return;
-editTxIdx=idx;
-let t=u.tx[idx];
-document.getElementById('eTxUser').textContent=u.name;
-document.getElementById('eTxDate').value=t.date||'';
-document.getElementById('eTxDesc').value=t.desc||'';
-document.getElementById('eTxAmt').value=t.amount;
-document.getElementById('eTxErr').innerHTML='';
-document.getElementById('editTxModal').classList.remove('hidden');
+function fmt(n) { return '₦' + Number(n).toLocaleString(); }
+function bal(u) { return u.tx.reduce((s, t) => s + ((t.withdraw || t.type === 'Debit') ? -t.amount : t.amount), 0); }
+function daysLeft(d) { return Math.max(0, Math.ceil((new Date(d) - new Date()) / (1000 * 60 * 60 * 24))); }
+
+function toggleTheme() {
+  document.body.classList.toggle('dark');
+  const d = document.body.classList.contains('dark');
+  try { localStorage.setItem('sts_theme', d ? 'dark' : 'light'); } catch (e) {}
+  document.getElementById('themeBtn').textContent = d ? '☀️ White' : '🌙 Dark';
 }
-function closeEditTx(){editTxIdx=null; let m=document.getElementById('editTxModal'); if(m)m.classList.add('hidden')}
-function saveEditTx(){
-let u=users.find(x=>x.id===detailId); if(!u||editTxIdx===null||!u.tx[editTxIdx])return;
-let amt=Number(document.getElementById('eTxAmt').value);
-let err=document.getElementById('eTxErr');
-if(!amt||amt<=0){err.innerHTML='<div class="err">Enter a valid amount greater than 0.</div>';return}
-let t=u.tx[editTxIdx];
-t.date=document.getElementById('eTxDate').value||t.date||new Date().toISOString().slice(0,10);
-t.desc=document.getElementById('eTxDesc').value.trim()||'Transaction';
-t.amount=amt;
-save(); closeEditTx(); openDetail(detailId); showAdminToast('Transaction updated.',true);
+try {
+  if (localStorage.getItem('sts_theme') === 'dark') toggleTheme();
+} catch (e) {}
+
+function showTab(id, btn) {
+  document.querySelectorAll('.tab').forEach((b) => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('howBox').classList.toggle('hidden', id !== 'how');
+  document.getElementById('aboutBox').classList.toggle('hidden', id !== 'about');
 }
-function copyCode(){let u=users.find(x=>x.id===detailId); if(!u)return; let txt='Name: '+u.name+' Code: '+u.code; if(navigator.clipboard) navigator.clipboard.writeText(txt).catch(()=>{}); showAdminToast('Copied: '+txt,true)}
-function addTx(){let u=users.find(x=>x.id===detailId); if(!u)return; let amt=Number(document.getElementById('tAmt').value); let err=document.getElementById('txErr'); if(!amt||amt<=0){err.innerHTML='<div class="err">Enter amount</div>';return} err.innerHTML=''; u.tx.push({date:document.getElementById('tDate').value||new Date().toISOString().slice(0,10),desc:document.getElementById('tDesc').value||'Transaction',type:'Paid',amount:amt}); save(); openDetail(detailId); showAdminToast('Paid '+fmt(amt)+' added.',true)}
-function askDelete(){let u=users.find(x=>x.id===detailId); if(!u)return; document.getElementById('delTitle').textContent='Delete '+u.name+'?'; document.getElementById('deleteModal').classList.remove('hidden')}
-function closeDeleteModal(){document.getElementById('deleteModal').classList.add('hidden')}
-function confirmDelete(){let u=users.find(x=>x.id===detailId); closeDeleteModal(); if(!u)return; let name=u.name; users=users.filter(x=>x.id!==detailId); detailId=null; save(); renderAdminList(); showAdminToast(name+' deleted',true)}
-function openNew(){closeEditTx(); document.getElementById('newForm').classList.remove('hidden'); document.getElementById('adminSummary').innerHTML=''; document.getElementById('adminSearchWrap').classList.add('hidden'); document.getElementById('adminList').innerHTML=''; document.getElementById('adminDetail').classList.add('hidden')}
-function closeNew(){document.getElementById('newForm').classList.add('hidden'); renderAdminList()}
-function genCode(){let c=''; do{c=String(Math.floor(1000+Math.random()*9000))}while(users.some(u=>u.code===c)); document.getElementById('nCode').value=c}
-function createUser(){let name=document.getElementById('nName').value.trim(); let code=document.getElementById('nCode').value.trim(); let target=Number(document.getElementById('nTarget').value)||0; let date=document.getElementById('nDate').value||'2026-12-31'; let start=Number(document.getElementById('nStart').value)||0; let m=document.getElementById('newMsg'); if(!name||code.length!==4){m.innerHTML='<div class="err">Enter Name and 4-digit Code.</div>';return} if(users.some(u=>u.code===code)){m.innerHTML='<div class="err">Code already used. Generate another.</div>';return} let tx=start?[{date:new Date().toISOString().slice(0,10),desc:'Opening Balance',type:'Paid',amount:start}]:[]; users.push({id:Date.now(),name,code,target,targetDate:date,tx}); save(); m.innerHTML='<div class="ok">'+esc(name)+' created. Code: '+esc(code)+'</div>'; setTimeout(()=>{m.innerHTML='';closeNew()},900)}
-function logout(){current=null; detailId=null; closeWithdraw(); closeDeleteModal(); closeEditTx(); document.getElementById('adminSearch').value=''; document.getElementById('adminSummary').innerHTML=''; document.getElementById('adminSearchWrap').classList.add('hidden'); document.getElementById('userToast').innerHTML=''; document.getElementById('adminToast').innerHTML=''; document.getElementById('userView').classList.add('hidden'); document.getElementById('adminView').classList.add('hidden'); document.getElementById('loginView').classList.remove('hidden'); document.getElementById('loginName').value=''; document.getElementById('loginCode').value=''}
+function showAdminToast(text, ok) {
+  const el = document.getElementById('adminToast');
+  el.innerHTML = '<div class="' + (ok ? 'ok' : 'err') + '">' + esc(text) + '</div>';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.innerHTML = ''; }, 3200);
+}
+function showUserToast(text, ok) {
+  const el = document.getElementById('userToast');
+  el.innerHTML = '<div class="' + (ok ? 'ok' : 'err') + '">' + esc(text) + '</div>';
+  clearTimeout(userToastTimer);
+  userToastTimer = setTimeout(() => { el.innerHTML = ''; }, 3200);
+}
+
+function renderCloudSyncBox() {
+  const box = document.getElementById('cloudSyncBox');
+  const errBox = document.getElementById('cloudErrBox');
+  if (!box) return;
+  if (isCloudAdmin()) {
+    box.innerHTML =
+      '<div class="sync-box on"><div><div style="font-weight:800;font-size:14px">Online Cloud Sync Active (' +
+      esc(fbUser.email) +
+      ')</div><div style="font-size:12px;margin-top:2px">' +
+      (cloudSynced
+        ? 'Accounts &amp; transactions sync live so users can log in on any phone.'
+        : 'Connecting to cloud database...') +
+      '</div></div><button type="button" class="ghost" style="padding:8px 12px;font-size:12px" onclick="adminGoogleSignOut()">Disconnect</button></div>';
+  } else {
+    box.innerHTML =
+      '<div class="sync-box off"><div><div style="font-weight:800;font-size:14px">Online Cloud Sync Not Connected</div><div style="font-size:12px;margin-top:2px">Sign in with Google (' +
+      esc(ADMIN_EMAIL) +
+      ') so accounts sync to users&#39; phones.</div></div><button type="button" class="sync-btn" onclick="adminGoogleSignIn()" ' +
+      (authBusy ? 'disabled' : '') +
+      '>' +
+      (authBusy ? 'Signing in...' : 'Sign in with Google') +
+      '</button></div>';
+  }
+  if (errBox) {
+    errBox.innerHTML = cloudError ? '<div class="err">' + esc(cloudError) + '</div>' : '';
+  }
+}
+
+function startAdminListener() {
+  if (adminUnsub) { adminUnsub(); adminUnsub = null; }
+  if (!isCloudAdmin()) return;
+  adminUnsub = onSnapshot(
+    collection(db, 'accounts'),
+    async (snapshot) => {
+      cloudError = '';
+      cloudSynced = true;
+      const remoteList = snapshot.docs
+        .map((d) => fromFirestoreDoc(d.id, d.data()))
+        .sort((a, b) => a.id - b.id);
+
+      if (!hasMigrated) {
+        hasMigrated = true;
+        const existingIds = new Set(snapshot.docs.map((d) => d.id));
+        const combined = [...(initialLocalUsers || []), ...pendingLocalUsers];
+        const seen = new Map();
+        combined.forEach((u) => seen.set(makeAccountId(u.name, u.code), u));
+        const deduped = Array.from(seen.values());
+        const toMigrate = snapshot.empty
+          ? (deduped.length ? deduped : DEFAULT_USERS)
+          : deduped.filter((u) => !existingIds.has(makeAccountId(u.name, u.code)));
+
+        let wroteAny = false;
+        for (const localAcc of toMigrate) {
+          if (!/^\d{4}$/.test(String(localAcc.code || '').trim())) continue;
+          const docId = makeAccountId(localAcc.name, localAcc.code);
+          if (!existingIds.has(docId)) {
+            wroteAny = true;
+            try {
+              await setDoc(doc(db, 'accounts', docId), toFirestoreAccount(localAcc));
+            } catch (err) {
+              handleFirestoreError(err, 'create', 'accounts/' + docId);
+            }
+          }
+        }
+        pendingLocalUsers = [];
+        if (wroteAny) { renderCloudSyncBox(); return; }
+      }
+
+      users = remoteList;
+      save();
+      renderCloudSyncBox();
+      if (!document.getElementById('adminView').classList.contains('hidden')) {
+        if (!document.getElementById('adminDetail').classList.contains('hidden') && detailId !== null) {
+          if (users.some((u) => u.id === detailId)) openDetail(detailId);
+          else renderAdminList();
+        } else if (document.getElementById('newForm').classList.contains('hidden')) {
+          renderAdminList();
+        }
+      }
+    },
+    (err) => {
+      cloudSynced = false;
+      cloudError = 'Could not load cloud accounts.';
+      renderCloudSyncBox();
+      handleFirestoreError(err, 'list', 'accounts');
+    }
+  );
+}
+
+onAuthStateChanged(auth, (u) => {
+  fbUser = u;
+  if (!u) {
+    hasMigrated = false;
+    cloudSynced = false;
+    if (adminUnsub) { adminUnsub(); adminUnsub = null; }
+  } else if (isCloudAdmin()) {
+    startAdminListener();
+  }
+  renderCloudSyncBox();
+});
+
+async function adminGoogleSignIn() {
+  authBusy = true;
+  cloudError = '';
+  renderCloudSyncBox();
+  try {
+    const cred = await signInWithPopup(auth, googleProvider);
+    const email = (cred.user && cred.user.email) || '';
+    if (email.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+      cloudError = 'Signed in as ' + email + ', which is not authorized. Please sign in with ' + ADMIN_EMAIL + '.';
+    } else {
+      showAdminToast('Cloud sync connected!', true);
+    }
+  } catch (err) {
+    const code = (err && err.code) || '';
+    if (code === 'auth/unauthorized-domain') {
+      cloudError = 'Domain "' + window.location.hostname + '" needs to be added to Firebase Console -> Authentication -> Settings -> Authorized domains before Google Sign-In works on this domain.';
+    } else if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
+      cloudError = 'Google sign-in was cancelled. Tap the button again to sync.';
+    } else {
+      cloudError = err && err.message ? err.message : 'Google sign-in failed. Please try again.';
+    }
+  } finally {
+    authBusy = false;
+    renderCloudSyncBox();
+  }
+}
+
+async function adminGoogleSignOut() {
+  try {
+    await signOut(auth);
+    cloudSynced = false;
+    renderCloudSyncBox();
+    showAdminToast('Google sync disconnected.', true);
+  } catch (e) {
+    cloudError = 'Could not sign out of Google.';
+    renderCloudSyncBox();
+  }
+}
+
+function copyTextSafe(txt) {
+  if (navigator.clipboard && window.isSecureContext) {
+    return navigator.clipboard.writeText(txt).then(() => true).catch(() => fallbackCopy(txt));
+  }
+  return Promise.resolve(fallbackCopy(txt));
+}
+function fallbackCopy(txt) {
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = txt;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  } catch (e) {
+    return false;
+  }
+}
+function copyBank(mode) {
+  const txt = mode === 'number' ? '2150445461' : '2150445461\nStephen Stanley\nUBA Bank';
+  copyTextSafe(txt).then((ok) => {
+    if (!ok) { showUserToast('Could not copy automatically. Please copy manually.', false); return; }
+    const nb = document.getElementById('copyNumBtn');
+    const ab = document.getElementById('copyAllBtn');
+    if (mode === 'number' && nb) nb.textContent = '✓ Copied';
+    if (mode === 'all' && ab) ab.textContent = '✓ Copied All';
+    clearTimeout(copyTimer);
+    copyTimer = setTimeout(() => {
+      if (nb) nb.textContent = 'Copy';
+      if (ab) ab.textContent = 'Copy All';
+    }, 2200);
+    showUserToast(mode === 'number' ? 'Account number copied: 2150445461' : 'Bank account details copied.', true);
+  });
+}
+
+function startUserListener(docId) {
+  if (userUnsub) { userUnsub(); userUnsub = null; }
+  if (!docId) return;
+  userUnsub = onSnapshot(
+    doc(db, 'accounts', docId),
+    (snap) => {
+      if (snap.exists()) {
+        current = fromFirestoreDoc(snap.id, snap.data());
+        renderUser();
+      }
+    },
+    (err) => {
+      handleFirestoreError(err, 'get', 'accounts/' + docId);
+    }
+  );
+}
+
+async function login() {
+  const name = document.getElementById('loginName').value.trim();
+  const code = document.getElementById('loginCode').value.trim();
+  const msg = document.getElementById('loginMsg');
+  const btn = document.getElementById('loginBtn');
+
+  if (name.toLowerCase() === 'admin' && code.toLowerCase() === 'gospel') {
+    msg.innerHTML = '';
+    showAdmin();
+    return;
+  }
+
+  if (!name || !/^\d{4}$/.test(code)) {
+    msg.innerHTML = '<div class="err">Name and code do not match. Please try again.</div>';
+    return;
+  }
+
+  msg.innerHTML = '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Checking Account...'; }
+  const accountId = makeAccountId(name, code);
+
+  try {
+    const snap = await getDoc(doc(db, 'accounts', accountId));
+    if (snap.exists()) {
+      current = fromFirestoreDoc(snap.id, snap.data());
+      document.getElementById('loginView').classList.add('hidden');
+      document.getElementById('userView').classList.remove('hidden');
+      renderUser();
+      startUserListener(snap.id);
+      return;
+    }
+  } catch (err) {
+    const errMsg = err && err.message ? err.message : String(err);
+    if (errMsg.includes('Missing or insufficient permissions')) {
+      msg.innerHTML = '<div class="err">Unable to verify account permissions.</div>';
+      if (btn) { btn.disabled = false; btn.textContent = 'See My Balance'; }
+      handleFirestoreError(err, 'get', 'accounts/' + accountId);
+    }
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'See My Balance'; }
+  }
+
+  const u = users.find((x) => x.name.toLowerCase() === name.toLowerCase() && x.code === code);
+  if (!u) {
+    msg.innerHTML = '<div class="err">Name and code do not match. Please try again.</div>';
+    return;
+  }
+  current = u;
+  document.getElementById('loginView').classList.add('hidden');
+  document.getElementById('userView').classList.remove('hidden');
+  renderUser();
+}
+
+function renderAvatarHtml(u) {
+  if (u.avatar) return '<img src="' + u.avatar + '" alt="' + esc(u.name) + '">';
+  return esc((u.name[0] || '?').toUpperCase());
+}
+
+function renderUser() {
+  const u = current;
+  if (!u) return;
+  document.getElementById('welcomeName').textContent = u.name;
+  document.getElementById('welcomeCode').textContent = u.name + ' • ' + u.code;
+  const av = document.getElementById('userAvatar');
+  av.className = 'avatar-lg' + (u.avatar ? ' has-img' : '');
+  av.innerHTML = renderAvatarHtml(u);
+  document.getElementById('photoBtn').textContent = u.avatar ? 'Change Photo' : '+ Add Photo';
+  document.getElementById('removePhotoBtn').classList.toggle('hidden', !u.avatar);
+  const b = bal(u);
+  document.getElementById('uBal').textContent = fmt(b);
+  document.getElementById('uTarget').textContent = fmt(u.target);
+  document.getElementById('uDate').textContent = u.targetDate;
+  document.getElementById('uDays').textContent = daysLeft(u.targetDate) + ' days';
+  const p = u.target > 0 ? Math.min(100, Math.max(0, Math.round((b / u.target) * 100))) : 0;
+  document.getElementById('uFill').style.width = p + '%';
+  document.getElementById('uProg').textContent = p + '% of target';
+  document.getElementById('uTargetLine').textContent = 'Target: ' + fmt(u.target) + ' • ' + u.targetDate;
+  const reached = u.target > 0 && b >= u.target;
+  document.getElementById('withdrawBtn').classList.toggle('hidden', !reached);
+  document.getElementById('uReachedBadge').classList.toggle('hidden', !reached);
+  document.getElementById('uHist').innerHTML = u.tx.map((t) => {
+    const w = !!(t.withdraw || t.type === 'Debit');
+    return '<tr><td>' + esc(t.date) + '</td><td>' + esc(t.desc) + '</td><td><span class="pill ' + (w ? 'debit' : 'paid') + '">Paid</span></td><td>' + (w ? '-' : '') + fmt(t.amount) + '</td></tr>';
+  }).join('');
+}
+
+function pickAvatar() { document.getElementById('avatarInput').click(); }
+function handleAvatarFile(e) {
+  const file = e.target.files && e.target.files[0];
+  e.target.value = '';
+  if (!file || !current) return;
+  if (!file.type.startsWith('image/')) { showUserToast('Please select a valid image file.', false); return; }
+  const reader = new FileReader();
+  reader.onerror = () => showUserToast('Could not read image file.', false);
+  reader.onload = function () {
+    const img = new Image();
+    img.onerror = () => showUserToast('Invalid image file.', false);
+    img.onload = async function () {
+      const max = 256;
+      const scale = Math.min(1, max / Math.max(img.width, img.height));
+      const w = Math.max(1, Math.round(img.width * scale));
+      const h = Math.max(1, Math.round(img.height * scale));
+      const c = document.createElement('canvas');
+      c.width = w;
+      c.height = h;
+      const ctx = c.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      const dataUrl = c.toDataURL('image/jpeg', 0.82);
+      if (dataUrl.length > 290000) {
+        showUserToast('Image is too large. Please pick a smaller photo.', false);
+        return;
+      }
+      if (current.docId) {
+        try {
+          await updateDoc(doc(db, 'accounts', current.docId), { avatar: dataUrl, updatedAt: serverTimestamp() });
+        } catch (err) {
+          showUserToast('Could not save profile picture online.', false);
+          handleFirestoreError(err, 'update', 'accounts/' + current.docId);
+        }
+      }
+      current.avatar = dataUrl;
+      save();
+      renderUser();
+      showUserToast('Profile picture updated.', true);
+    };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function removeAvatar() {
+  if (!current) return;
+  if (current.docId) {
+    try {
+      await updateDoc(doc(db, 'accounts', current.docId), { avatar: deleteField(), updatedAt: serverTimestamp() });
+    } catch (err) {
+      showUserToast('Could not remove profile picture online.', false);
+      handleFirestoreError(err, 'update', 'accounts/' + current.docId);
+    }
+  }
+  delete current.avatar;
+  save();
+  renderUser();
+  showUserToast('Profile picture removed.', true);
+}
+
+function openWithdraw() {
+  if (!current) return;
+  const b = bal(current);
+  document.getElementById('wAvail').textContent = 'Available balance: ' + fmt(b);
+  document.getElementById('wAmt').value = b;
+  document.getElementById('wAmt').max = b;
+  document.getElementById('wNote').value = 'Target Withdrawal';
+  document.getElementById('wErr').innerHTML = '';
+  document.getElementById('withdrawModal').classList.remove('hidden');
+}
+function closeWithdraw() { document.getElementById('withdrawModal').classList.add('hidden'); }
+async function submitWithdraw() {
+  if (!current) return;
+  const b = bal(current);
+  const amt = Number(document.getElementById('wAmt').value);
+  const note = (document.getElementById('wNote').value.trim() || 'Target Withdrawal').slice(0, 120);
+  const err = document.getElementById('wErr');
+  if (!amt || amt <= 0) { err.innerHTML = '<div class="err">Enter a valid withdrawal amount.</div>'; return; }
+  if (amt > b) { err.innerHTML = '<div class="err">Amount cannot exceed your current balance (' + fmt(b) + ').</div>'; return; }
+  const nextTx = sanitizeTxList([...current.tx, { date: todayISO(), desc: note, type: 'Paid', withdraw: true, amount: amt }]);
+  if (current.docId) {
+    try {
+      await updateDoc(doc(db, 'accounts', current.docId), { tx: nextTx, updatedAt: serverTimestamp() });
+    } catch (e) {
+      err.innerHTML = '<div class="err">Could not save withdrawal online. Please try again.</div>';
+      handleFirestoreError(e, 'update', 'accounts/' + current.docId);
+    }
+  }
+  current.tx = nextTx;
+  save();
+  closeWithdraw();
+  renderUser();
+  showUserToast('Withdrawal of ' + fmt(amt) + ' recorded.', true);
+}
+
+function showAdmin() {
+  document.getElementById('loginView').classList.add('hidden');
+  document.getElementById('adminView').classList.remove('hidden');
+  renderCloudSyncBox();
+  renderAdminList();
+}
+function renderAdminList() {
+  closeEditTx();
+  document.getElementById('adminDetail').classList.add('hidden');
+  document.getElementById('newForm').classList.add('hidden');
+  const total = users.reduce((s, u) => s + bal(u), 0);
+  document.getElementById('adminSummary').innerHTML =
+    '<div class="balance" style="border-radius:18px;padding:16px 20px;margin-bottom:12px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px"><div><div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;opacity:.85">Total Balance (All Users)</div><div style="font-size:30px;font-weight:900;margin-top:2px">' +
+    fmt(total) +
+    '</div></div><div style="background:rgba(255,255,255,.15);padding:6px 12px;border-radius:999px;font-size:12px;font-weight:700">' +
+    users.length +
+    ' ' +
+    (users.length === 1 ? 'User' : 'Users') +
+    '</div></div>';
+  document.getElementById('adminSearchWrap').classList.remove('hidden');
+  renderAdminRows();
+}
+function clearAdminSearch() { document.getElementById('adminSearch').value = ''; renderAdminRows(); }
+function renderAdminRows() {
+  const raw = (document.getElementById('adminSearch').value || '').trim();
+  const q = raw.toLowerCase();
+  document.getElementById('clearSearchBtn').classList.toggle('hidden', !raw);
+  const list = q ? users.filter((u) => u.name.toLowerCase().includes(q)) : users;
+  document.getElementById('adminList').innerHTML = list.length
+    ? list.map((u) =>
+        '<div class="userrow" onclick="openDetail(' + u.id + ')"><div class="flex"><div class="avatar">' +
+        renderAvatarHtml(u) +
+        '</div><div><b>' + esc(u.name) + ' • ' + esc(u.code) +
+        '</b><div style="color:var(--muted);font-size:13px">Target ' + esc(u.targetDate) + ' • ' + daysLeft(u.targetDate) +
+        ' days remaining</div></div></div><div><b>' + fmt(bal(u)) + '</b> <span style="color:var(--orange)">→</span></div></div>'
+      ).join('')
+    : '<div class="card" style="text-align:center;color:var(--muted);font-weight:600">' +
+      (q ? 'No savings accounts found matching &quot;' + esc(raw) + '&quot;.' : 'No savings accounts yet.') +
+      '</div>';
+}
+
+function openDetail(id) {
+  detailId = id;
+  closeEditTx();
+  const u = users.find((x) => x.id === id);
+  if (!u) return;
+  document.getElementById('adminSummary').innerHTML = '';
+  document.getElementById('adminSearchWrap').classList.add('hidden');
+  document.getElementById('adminList').innerHTML = '';
+  const d = document.getElementById('adminDetail');
+  d.classList.remove('hidden');
+  d.innerHTML =
+    '<div class="card"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center"><div class="flex"><div class="avatar" style="width:52px;height:52px;font-size:18px">' +
+    renderAvatarHtml(u) +
+    '</div><div><h2>' + esc(u.name) + ' • ' + esc(u.code) +
+    '</h2><p style="color:var(--muted)">Target ' + esc(u.targetDate) + ' • ' + daysLeft(u.targetDate) +
+    ' days remaining</p></div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="ghost" onclick="copyCode()">Copy User Link / Code</button><button class="danger" onclick="askDelete()">🗑 Delete</button></div></div><div class="balance" style="margin-top:14px"><h2>Current Balance</h2><div class="big">' +
+    fmt(bal(u)) + '</div><p>Target ' + fmt(u.target) +
+    '</p></div><div style="display:flex;align-items:center;gap:8px;margin:16px 0 8px"><h3>Add Transaction</h3><span class="pill paid">Paid</span></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px"><input id="tDate" type="date" value="' +
+    todayISO() +
+    '"><input id="tDesc" placeholder="Description"><input id="tAmt" type="number" placeholder="Amount"></div><div id="txErr"></div><button class="btn" onclick="addTx()">Add Transaction</button><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:16px 0 8px"><h3>History</h3><span style="font-size:12px;font-weight:700;color:var(--muted)">Tap any row or Edit to update</span></div><div style="overflow:auto"><table><thead><tr><th>Date</th><th>Description</th><th>Status</th><th>Amount</th><th style="text-align:right">Action</th></tr></thead><tbody>' +
+    u.tx.map((t, i) => {
+      const w = !!(t.withdraw || t.type === 'Debit');
+      return '<tr class="tx-row" onclick="openEditTx(' + i + ')" title="Click to edit transaction"><td style="white-space:nowrap">' + esc(t.date) +
+        '</td><td>' + esc(t.desc) + '</td><td><span class="pill ' + (w ? 'debit' : 'paid') + '">Paid</span></td><td style="white-space:nowrap;font-weight:700">' +
+        (w ? '-' : '') + fmt(t.amount) +
+        '</td><td style="text-align:right"><button type="button" class="edit-tx-btn" onclick="event.stopPropagation();openEditTx(' + i +
+        ')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg> Edit</button></td></tr>';
+    }).join('') +
+    '</tbody></table></div><button class="ghost" style="margin-top:14px" onclick="renderAdminList()">← Back to List</button></div>';
+}
+
+function openEditTx(idx) {
+  const u = users.find((x) => x.id === detailId);
+  if (!u || !u.tx[idx]) return;
+  editTxIdx = idx;
+  const t = u.tx[idx];
+  document.getElementById('eTxUser').textContent = u.name;
+  document.getElementById('eTxDate').value = t.date || '';
+  document.getElementById('eTxDesc').value = t.desc || '';
+  document.getElementById('eTxAmt').value = t.amount;
+  document.getElementById('eTxErr').innerHTML = '';
+  document.getElementById('editTxModal').classList.remove('hidden');
+}
+function closeEditTx() {
+  editTxIdx = null;
+  const m = document.getElementById('editTxModal');
+  if (m) m.classList.add('hidden');
+}
+async function saveEditTx() {
+  const u = users.find((x) => x.id === detailId);
+  if (!u || editTxIdx === null || !u.tx[editTxIdx]) return;
+  const amt = Number(document.getElementById('eTxAmt').value);
+  const err = document.getElementById('eTxErr');
+  if (!amt || amt <= 0) { err.innerHTML = '<div class="err">Enter a valid amount greater than 0.</div>'; return; }
+  const existing = u.tx[editTxIdx];
+  const updated = {
+    ...existing,
+    date: (document.getElementById('eTxDate').value || existing.date || todayISO()).slice(0, 20),
+    desc: (document.getElementById('eTxDesc').value.trim() || 'Transaction').slice(0, 120),
+    type: 'Paid',
+    amount: amt
+  };
+  const nextTx = sanitizeTxList(u.tx.map((item, i) => (i === editTxIdx ? updated : item)));
+
+  if (isCloudAdmin()) {
+    const docId = u.docId || makeAccountId(u.name, u.code);
+    try {
+      await updateDoc(doc(db, 'accounts', docId), { tx: nextTx, updatedAt: serverTimestamp() });
+    } catch (e) {
+      err.innerHTML = '<div class="err">Could not sync edited transaction to cloud.</div>';
+      handleFirestoreError(e, 'update', 'accounts/' + docId);
+    }
+  } else {
+    u.tx = nextTx;
+    save();
+  }
+  closeEditTx();
+  openDetail(detailId);
+  showAdminToast(isCloudAdmin() ? 'Transaction updated & synced.' : 'Updated locally. Sign in with Google to sync.', true);
+}
+
+function copyCode() {
+  const u = users.find((x) => x.id === detailId);
+  if (!u) return;
+  const txt = 'Name: ' + u.name + ' Code: ' + u.code;
+  copyTextSafe(txt).catch(() => {});
+  showAdminToast('Copied: ' + txt, true);
+}
+
+async function addTx() {
+  const u = users.find((x) => x.id === detailId);
+  if (!u) return;
+  const amt = Number(document.getElementById('tAmt').value);
+  const err = document.getElementById('txErr');
+  if (!amt || amt <= 0) { err.innerHTML = '<div class="err">Enter amount</div>'; return; }
+  err.innerHTML = '';
+  const newTx = {
+    date: (document.getElementById('tDate').value || todayISO()).slice(0, 20),
+    desc: (document.getElementById('tDesc').value.trim() || 'Transaction').slice(0, 120),
+    type: 'Paid',
+    amount: amt
+  };
+  const nextTx = sanitizeTxList([...u.tx, newTx]);
+
+  if (isCloudAdmin()) {
+    const docId = u.docId || makeAccountId(u.name, u.code);
+    try {
+      await updateDoc(doc(db, 'accounts', docId), { tx: nextTx, updatedAt: serverTimestamp() });
+    } catch (e) {
+      err.innerHTML = '<div class="err">Could not sync transaction to cloud.</div>';
+      handleFirestoreError(e, 'update', 'accounts/' + docId);
+    }
+  } else {
+    u.tx = nextTx;
+    save();
+  }
+  openDetail(detailId);
+  showAdminToast(isCloudAdmin() ? 'Paid ' + fmt(amt) + ' added & synced.' : 'Paid ' + fmt(amt) + ' saved locally. Sign in with Google to sync.', true);
+}
+
+function askDelete() {
+  const u = users.find((x) => x.id === detailId);
+  if (!u) return;
+  document.getElementById('delTitle').textContent = 'Delete ' + u.name + '?';
+  document.getElementById('deleteModal').classList.remove('hidden');
+}
+function closeDeleteModal() { document.getElementById('deleteModal').classList.add('hidden'); }
+async function confirmDelete() {
+  const u = users.find((x) => x.id === detailId);
+  closeDeleteModal();
+  if (!u) return;
+  const name = u.name;
+  if (isCloudAdmin()) {
+    const docId = u.docId || makeAccountId(u.name, u.code);
+    try {
+      await deleteDoc(doc(db, 'accounts', docId));
+    } catch (e) {
+      showAdminToast('Could not delete account from cloud.', false);
+      handleFirestoreError(e, 'delete', 'accounts/' + docId);
+    }
+  } else {
+    users = users.filter((x) => x.id !== detailId);
+    save();
+  }
+  detailId = null;
+  renderAdminList();
+  showAdminToast(name + ' deleted', true);
+}
+
+function openNew() {
+  closeEditTx();
+  document.getElementById('newForm').classList.remove('hidden');
+  document.getElementById('adminSummary').innerHTML = '';
+  document.getElementById('adminSearchWrap').classList.add('hidden');
+  document.getElementById('adminList').innerHTML = '';
+  document.getElementById('adminDetail').classList.add('hidden');
+}
+function closeNew() { document.getElementById('newForm').classList.add('hidden'); renderAdminList(); }
+function genCode() {
+  let c = '';
+  do { c = String(Math.floor(1000 + Math.random() * 9000)); } while (users.some((u) => u.code === c));
+  document.getElementById('nCode').value = c;
+}
+async function createUser() {
+  const name = document.getElementById('nName').value.trim().slice(0, 80);
+  const code = document.getElementById('nCode').value.trim();
+  const target = Math.max(0, Number(document.getElementById('nTarget').value) || 0);
+  const date = document.getElementById('nDate').value || '2026-12-31';
+  const start = Number(document.getElementById('nStart').value) || 0;
+  const m = document.getElementById('newMsg');
+  if (!name || !/^\d{4}$/.test(code)) { m.innerHTML = '<div class="err">Enter Name and a 4-digit numeric Code.</div>'; return; }
+  const docId = makeAccountId(name, code);
+  if (users.some((u) => u.code === code || makeAccountId(u.name, u.code) === docId)) {
+    m.innerHTML = '<div class="err">Code already used. Generate another.</div>';
+    return;
+  }
+  const tx = start ? [{ date: todayISO(), desc: 'Opening Balance', type: 'Paid', amount: start }] : [];
+  const created = { id: Date.now(), docId, name, code, target, targetDate: date, tx };
+
+  if (isCloudAdmin()) {
+    try {
+      await setDoc(doc(db, 'accounts', docId), toFirestoreAccount(created));
+    } catch (e) {
+      m.innerHTML = '<div class="err">Could not save account to cloud.</div>';
+      handleFirestoreError(e, 'create', 'accounts/' + docId);
+    }
+    m.innerHTML = '<div class="ok">' + esc(name) + ' created &amp; synced online. Code: ' + esc(code) + '</div>';
+  } else {
+    pendingLocalUsers.push(created);
+    users.push(created);
+    save();
+    m.innerHTML = '<div class="ok">' + esc(name) + ' saved locally (Code: ' + esc(code) + '). Sign in with Google to sync online.</div>';
+  }
+  setTimeout(() => { m.innerHTML = ''; closeNew(); }, 900);
+}
+
+function logout() {
+  if (userUnsub) { userUnsub(); userUnsub = null; }
+  current = null;
+  detailId = null;
+  closeWithdraw();
+  closeDeleteModal();
+  closeEditTx();
+  document.getElementById('adminSearch').value = '';
+  document.getElementById('adminSummary').innerHTML = '';
+  document.getElementById('adminSearchWrap').classList.add('hidden');
+  document.getElementById('userToast').innerHTML = '';
+  document.getElementById('adminToast').innerHTML = '';
+  document.getElementById('userView').classList.add('hidden');
+  document.getElementById('adminView').classList.add('hidden');
+  document.getElementById('loginView').classList.remove('hidden');
+  document.getElementById('loginName').value = '';
+  document.getElementById('loginCode').value = '';
+}
+
+Object.assign(window, {
+  toggleTheme,
+  showTab,
+  login,
+  pickAvatar,
+  handleAvatarFile,
+  removeAvatar,
+  openWithdraw,
+  closeWithdraw,
+  submitWithdraw,
+  copyBank,
+  logout,
+  openNew,
+  closeNew,
+  genCode,
+  createUser,
+  renderAdminRows,
+  clearAdminSearch,
+  openDetail,
+  copyCode,
+  askDelete,
+  closeDeleteModal,
+  confirmDelete,
+  addTx,
+  openEditTx,
+  closeEditTx,
+  saveEditTx,
+  adminGoogleSignIn,
+  adminGoogleSignOut
+});
 </script>
 </body>
 </html>
