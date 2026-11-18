@@ -43,8 +43,15 @@ input:focus{border-color:var(--blue);box-shadow:0 0 0 4px rgba(37,99,235,.15)}
 table{width:100%;border-collapse:collapse;font-size:14px}th{text-align:left;padding:10px;color:var(--muted)}td{padding:11px 10px;border-top:1px solid var(--border)}
 tr.tx-row{cursor:pointer;transition:background .15s}tr.tx-row:hover{background:rgba(37,99,235,.06)}
 .edit-tx-btn{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:8px;font-size:12px;font-weight:800;background:#DBEAFE;color:#1E40AF}.edit-tx-btn:hover{background:#BFDBFE}
-.pill{padding:5px 10px;border-radius:999px;font-weight:800;font-size:12px}.paid{background:#DCFCE7;color:#15803D}.debit{background:#FFEDD5;color:#C2410C}
-.userrow{display:flex;justify-content:space-between;align-items:center;padding:14px;border:1px solid var(--border);border-radius:16px;margin-bottom:10px;background:var(--card);cursor:pointer}
+.pill{padding:5px 10px;border-radius:999px;font-weight:800;font-size:12px}.paid{background:#DCFCE7;color:#15803D}.debit{background:#FFEDD5;color:#C2410C}.pending{background:#FEF3C7;color:#92400E}.rejected{background:#FEE2E2;color:#B91C1C}
+.req-box{border:1px solid #FDE68A;background:#FFFBEB;border-radius:20px;padding:16px;margin-bottom:12px}
+body.dark .req-box{background:rgba(120,53,15,.25);border-color:rgba(245,158,11,.4)}
+.req-row{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;padding:12px;border:1px solid var(--border);border-radius:14px;background:var(--card);margin-top:8px}
+.approve-btn{display:inline-flex;align-items:center;gap:4px;background:#15803D;color:#fff;padding:7px 12px;border-radius:10px;font-size:12px;font-weight:800}.approve-btn:hover{background:#166534}
+.decline-btn{display:inline-flex;align-items:center;gap:4px;background:#DC2626;color:#fff;padding:7px 12px;border-radius:10px;font-size:12px;font-weight:800}.decline-btn:hover{background:#B91C1C}
+.call-btn{display:inline-flex;align-items:center;gap:4px;background:#DBEAFE;color:#1E40AF;padding:4px 9px;border-radius:8px;font-size:11px;font-weight:800;text-decoration:none}.call-btn:hover{background:#BFDBFE}
+.phone-box{margin-top:12px;padding:12px 14px;border-radius:16px;border:1px solid var(--border);background:var(--bg);display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+.userrow{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;padding:14px;border:1px solid var(--border);border-radius:16px;margin-bottom:10px;background:var(--card);cursor:pointer}
 .userrow:hover{border-color:var(--blue2)}
 .search-wrap{position:relative;margin-bottom:12px}
 .search-wrap svg.search-ico{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
@@ -128,14 +135,15 @@ body.dark .sync-box.off{background:rgba(120,53,15,.35);border-color:rgba(245,158
 <h2>Current Balance</h2>
 <div class="big" id="uBal">₦0</div>
 </div>
-<button type="button" id="withdrawBtn" class="withdraw-btn hidden" onclick="openWithdraw()" title="Target reached! Click to withdraw">
+<button type="button" id="withdrawBtn" class="withdraw-btn hidden" onclick="openWithdraw()" title="Target reached! Click to submit withdrawal request">
 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg>
 <span>Withdraw</span>
 </button>
+<span id="uPendingApprovalBadge" class="pill pending hidden" style="padding:7px 12px">Pending Admin Approval</span>
 </div>
 <p id="uTargetLine"></p>
 <div class="progress"><div class="fill" id="uFill" style="width:0%"></div></div>
-<div class="prog-row"><span id="uProg"></span><span id="uReachedBadge" class="target-badge hidden"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg> Target reached — ready to withdraw</span></div>
+<div class="prog-row"><span id="uProg"></span><span id="uReachedBadge" class="target-badge hidden"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg> <span id="uReachedText">Target reached — ready to request withdrawal</span></span></div>
 </div>
 <div class="grid"><div class="card"><b>Target Amount</b><div id="uTarget" style="font-size:22px;font-weight:900;margin-top:6px"></div></div><div class="card"><b>Target Date</b><div id="uDate" style="font-size:22px;font-weight:900;margin-top:6px"></div></div><div class="card"><b>Days Remaining</b><div id="uDays" style="font-size:22px;font-weight:900;margin-top:6px"></div></div></div>
 <div class="card" style="margin-bottom:14px">
@@ -167,6 +175,7 @@ body.dark .sync-box.off{background:rgba(120,53,15,.35);border-color:rgba(245,158
 </div>
 </div>
 </div>
+<div id="uRequestsCard" class="card hidden" style="margin-bottom:14px"><h3>Withdrawal Requests</h3><div id="uRequestsList"></div></div>
 <div class="card"><h3>History</h3><div style="overflow:auto"><table><thead><tr><th>Date</th><th>Description</th><th>Status</th><th>Amount</th></tr></thead><tbody id="uHist"></tbody></table></div><button class="btn btn-blue" style="max-width:220px" onclick="logout()">Log Out</button></div>
 </div>
 
@@ -178,9 +187,10 @@ body.dark .sync-box.off{background:rgba(120,53,15,.35);border-color:rgba(245,158
 <div style="display:flex;gap:10px;flex-wrap:wrap;margin:14px 0"><button class="btn" style="width:auto;margin:0" onclick="openNew()">+ New Savings</button><button class="ghost" onclick="logout()">Exit Admin</button></div>
 <div id="adminToast"></div>
 <div id="adminSummary"></div>
+<div id="adminPendingQueue"></div>
 <div id="adminSearchWrap" class="search-wrap hidden">
 <svg class="search-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-<input id="adminSearch" placeholder="Filter users by name..." aria-label="Filter users by name" oninput="renderAdminRows()">
+<input id="adminSearch" placeholder="Filter users by name, code, or phone..." aria-label="Filter users by name, code, or phone" oninput="renderAdminRows()">
 <button type="button" id="clearSearchBtn" class="clear-btn hidden" onclick="clearAdminSearch()" aria-label="Clear search">
 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
 </button>
@@ -190,7 +200,8 @@ body.dark .sync-box.off{background:rgba(120,53,15,.35);border-color:rgba(245,158
 <div id="newForm" class="card hidden">
 <h3>New Savings</h3>
 <label>Name</label><input id="nName" placeholder="Your Name">
-<label>Code (4 digits)</label><div style="display:flex;gap:8px"><input id="nCode" placeholder="Your Code" maxlength="4"><button class="ghost" style="white-space:nowrap" onclick="genCode()">Generate Code</button></div>
+<label>Code (Alphanumeric, 4–12 chars)</label><div style="display:flex;gap:8px"><input id="nCode" placeholder="e.g. K7M9P2" maxlength="12" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"><button class="ghost" style="white-space:nowrap" onclick="genCode()">Generate Code</button></div>
+<label>Phone Number</label><input id="nPhone" type="tel" placeholder="e.g. 08012345678" maxlength="30">
 <label>Target Amount (₦)</label><input id="nTarget" type="number" placeholder="500000">
 <label>Target Date</label><input id="nDate" type="date">
 <label>Starting Balance (₦)</label><input id="nStart" type="number" placeholder="0">
@@ -206,16 +217,16 @@ body.dark .sync-box.off{background:rgba(120,53,15,.35);border-color:rgba(245,158
 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg>
 </div>
 <div>
-<h3 style="font-size:20px;font-weight:800">Withdraw Savings</h3>
+<h3 style="font-size:20px;font-weight:800">Request Withdrawal</h3>
 <p id="wAvail" style="font-size:12px;color:var(--muted)"></p>
 </div>
 </div>
 <label>Amount to Withdraw (₦)</label><input id="wAmt" type="number" min="1" placeholder="Enter amount">
-<label>Description / Account Note</label><input id="wNote" placeholder="Target Withdrawal">
+<label>Description / Bank Account Note</label><input id="wNote" placeholder="Target Withdrawal">
 <div id="wErr"></div>
 <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px">
 <button type="button" class="ghost" onclick="closeWithdraw()">Cancel</button>
-<button type="button" class="btn" style="width:auto;margin:0;padding:11px 18px" onclick="submitWithdraw()">Confirm Withdraw</button>
+<button type="button" class="btn" style="width:auto;margin:0;padding:11px 18px" onclick="submitWithdraw()">Submit Pending Request</button>
 </div>
 </div>
 </div>
@@ -323,7 +334,41 @@ function makeAccountId(name, code) {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 100) || 'user';
-  return slug + '_' + String(code || '').trim();
+  return slug + '_' + String(code || '').trim().toUpperCase();
+}
+
+function isValidUserCode(code) {
+  return /^[a-zA-Z0-9]{4,12}$/.test(String(code || '').trim());
+}
+
+function generateAlphanumericCode(existingCodes) {
+  const letters = 'ABCDEFGHJKMNPQRSTUVWXYZ';
+  const digits = '23456789';
+  const all = letters + digits;
+  let code = '';
+  let guard = 0;
+  do {
+    const chars = [
+      letters[Math.floor(Math.random() * letters.length)],
+      digits[Math.floor(Math.random() * digits.length)],
+      all[Math.floor(Math.random() * all.length)],
+      all[Math.floor(Math.random() * all.length)],
+      all[Math.floor(Math.random() * all.length)],
+      all[Math.floor(Math.random() * all.length)]
+    ];
+    for (let i = chars.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [chars[i], chars[j]] = [chars[j], chars[i]];
+    }
+    code = chars.join('');
+    guard++;
+  } while (guard < 50 && existingCodes.some((c) => String(c || '').toUpperCase() === code));
+  return code;
+}
+
+function formatTelHref(phone) {
+  const cleaned = String(phone || '').replace(/[^\d+]/g, '');
+  return 'tel:' + (cleaned || String(phone || '').trim());
 }
 
 function todayISO() {
@@ -345,18 +390,43 @@ function sanitizeTxList(txList) {
   });
 }
 
+function sanitizeWithdrawalRequests(reqs) {
+  return (Array.isArray(reqs) ? reqs : []).slice(0, 50).map((r, idx) => {
+    const status = (r && (r.status === 'approved' || r.status === 'rejected')) ? r.status : 'pending';
+    const item = {
+      id: String((r && r.id) || ('req_' + (idx + 1))).slice(0, 64),
+      date: String((r && r.date) || todayISO()).slice(0, 20),
+      note: String((r && r.note) || 'Target Withdrawal').slice(0, 120),
+      amount: Math.max(1, Number(r && r.amount) || 0),
+      status
+    };
+    if (r && r.reviewedAt) {
+      item.reviewedAt = String(r.reviewedAt).slice(0, 20);
+    }
+    return item;
+  });
+}
+
 function toFirestoreAccount(u) {
   const cleanName = String((u && u.name) || 'User').trim().slice(0, 80) || 'User';
+  const cleanPhone = String((u && u.phone) || '').trim().slice(0, 30);
+  const cleanReqs = sanitizeWithdrawalRequests(u && u.withdrawalRequests);
   const payload = {
     id: Number(u && u.id) || Date.now(),
     name: cleanName,
     nameLower: cleanName.toLowerCase().slice(0, 80),
-    code: String((u && u.code) || '').trim(),
+    code: String((u && u.code) || '').trim().slice(0, 12),
     target: Math.max(0, Number(u && u.target) || 0),
     targetDate: String((u && u.targetDate) || '2026-12-31').slice(0, 20),
     tx: sanitizeTxList(u && u.tx),
     updatedAt: serverTimestamp()
   };
+  if (cleanPhone) {
+    payload.phone = cleanPhone;
+  }
+  if (cleanReqs.length > 0) {
+    payload.withdrawalRequests = cleanReqs;
+  }
   if (u && typeof u.avatar === 'string' && u.avatar.length > 0 && u.avatar.length <= 300000) {
     payload.avatar = u.avatar;
   }
@@ -372,8 +442,12 @@ function fromFirestoreDoc(docId, data) {
     code: String(d.code || ''),
     target: Number(d.target) || 0,
     targetDate: String(d.targetDate || '2026-12-31'),
-    tx: Array.isArray(d.tx) ? d.tx : []
+    tx: Array.isArray(d.tx) ? d.tx : [],
+    withdrawalRequests: Array.isArray(d.withdrawalRequests) ? sanitizeWithdrawalRequests(d.withdrawalRequests) : []
   };
+  if (typeof d.phone === 'string' && d.phone.trim()) {
+    parsed.phone = d.phone.trim();
+  }
   if (typeof d.avatar === 'string' && d.avatar.length > 0) {
     parsed.avatar = d.avatar;
   }
@@ -527,7 +601,7 @@ function startAdminListener() {
 
         let wroteAny = false;
         for (const localAcc of toMigrate) {
-          if (!/^\d{4}$/.test(String(localAcc.code || '').trim())) continue;
+          if (!isValidUserCode(localAcc.code)) continue;
           const docId = makeAccountId(localAcc.name, localAcc.code);
           if (!existingIds.has(docId)) {
             wroteAny = true;
@@ -691,17 +765,22 @@ async function login() {
     return;
   }
 
-  if (!name || !/^\d{4}$/.test(code)) {
+  if (!name || !isValidUserCode(code)) {
     msg.innerHTML = '<div class="err">Name and code do not match. Please try again.</div>';
     return;
   }
 
   msg.innerHTML = '';
   if (btn) { btn.disabled = true; btn.textContent = 'Checking Account...'; }
-  const accountId = makeAccountId(name, code);
+  const primaryId = makeAccountId(name, code);
+  const altSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 100) || 'user';
+  const rawCaseId = altSlug + '_' + code;
 
   try {
-    const snap = await getDoc(doc(db, 'accounts', accountId));
+    let snap = await getDoc(doc(db, 'accounts', primaryId));
+    if (!snap.exists() && rawCaseId !== primaryId) {
+      snap = await getDoc(doc(db, 'accounts', rawCaseId));
+    }
     if (snap.exists()) {
       current = fromFirestoreDoc(snap.id, snap.data());
       document.getElementById('loginView').classList.add('hidden');
@@ -715,13 +794,13 @@ async function login() {
     if (errMsg.includes('Missing or insufficient permissions')) {
       msg.innerHTML = '<div class="err">Unable to verify account permissions.</div>';
       if (btn) { btn.disabled = false; btn.textContent = 'See My Balance'; }
-      handleFirestoreError(err, 'get', 'accounts/' + accountId);
+      handleFirestoreError(err, 'get', 'accounts/' + primaryId);
     }
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = 'See My Balance'; }
   }
 
-  const u = users.find((x) => x.name.toLowerCase() === name.toLowerCase() && x.code === code);
+  const u = users.find((x) => x.name.toLowerCase() === name.toLowerCase() && String(x.code || '').toUpperCase() === code.toUpperCase());
   if (!u) {
     msg.innerHTML = '<div class="err">Name and code do not match. Please try again.</div>';
     return;
@@ -737,17 +816,26 @@ function renderAvatarHtml(u) {
   return esc((u.name[0] || '?').toUpperCase());
 }
 
+function availToRequest(u) {
+  const b = bal(u);
+  const pendingSum = (u.withdrawalRequests || []).filter((r) => r.status === 'pending').reduce((s, r) => s + r.amount, 0);
+  return Math.max(0, b - pendingSum);
+}
+
 function renderUser() {
   const u = current;
   if (!u) return;
   document.getElementById('welcomeName').textContent = u.name;
-  document.getElementById('welcomeCode').textContent = u.name + ' • ' + u.code;
+  document.getElementById('welcomeCode').textContent = u.name + ' • ' + u.code + (u.phone ? ' • ' + u.phone : '');
   const av = document.getElementById('userAvatar');
   av.className = 'avatar-lg' + (u.avatar ? ' has-img' : '');
   av.innerHTML = renderAvatarHtml(u);
   document.getElementById('photoBtn').textContent = u.avatar ? 'Change Photo' : '+ Add Photo';
   document.getElementById('removePhotoBtn').classList.toggle('hidden', !u.avatar);
   const b = bal(u);
+  const avail = availToRequest(u);
+  const reqs = u.withdrawalRequests || [];
+  const pendingCount = reqs.filter((r) => r.status === 'pending').length;
   document.getElementById('uBal').textContent = fmt(b);
   document.getElementById('uTarget').textContent = fmt(u.target);
   document.getElementById('uDate').textContent = u.targetDate;
@@ -757,8 +845,25 @@ function renderUser() {
   document.getElementById('uProg').textContent = p + '% of target';
   document.getElementById('uTargetLine').textContent = 'Target: ' + fmt(u.target) + ' • ' + u.targetDate;
   const reached = u.target > 0 && b >= u.target;
-  document.getElementById('withdrawBtn').classList.toggle('hidden', !reached);
+  document.getElementById('withdrawBtn').classList.toggle('hidden', !(reached && avail > 0));
+  document.getElementById('uPendingApprovalBadge').classList.toggle('hidden', !(reached && avail === 0 && pendingCount > 0));
   document.getElementById('uReachedBadge').classList.toggle('hidden', !reached);
+  document.getElementById('uReachedText').textContent = pendingCount > 0 ? (pendingCount + ' withdrawal request pending') : 'Target reached — ready to request withdrawal';
+
+  const reqCard = document.getElementById('uRequestsCard');
+  const reqList = document.getElementById('uRequestsList');
+  if (reqs.length > 0) {
+    reqCard.classList.remove('hidden');
+    reqList.innerHTML = reqs.slice().reverse().map((r) => {
+      const cls = r.status === 'pending' ? 'pending' : (r.status === 'approved' ? 'paid' : 'rejected');
+      const lbl = r.status === 'pending' ? 'Pending' : (r.status === 'approved' ? 'Approved' : 'Declined');
+      return '<div class="req-row"><div><div style="font-weight:800;font-size:14px">' + fmt(r.amount) + ' — ' + esc(r.note) + '</div><div style="font-size:12px;color:var(--muted);margin-top:2px">Requested ' + esc(r.date) + (r.reviewedAt ? ' • Reviewed ' + esc(r.reviewedAt) : '') + '</div></div><span class="pill ' + cls + '">' + lbl + '</span></div>';
+    }).join('');
+  } else {
+    reqCard.classList.add('hidden');
+    reqList.innerHTML = '';
+  }
+
   document.getElementById('uHist').innerHTML = u.tx.map((t) => {
     const w = !!(t.withdraw || t.type === 'Debit');
     return '<tr><td>' + esc(t.date) + '</td><td>' + esc(t.desc) + '</td><td><span class="pill ' + (w ? 'debit' : 'paid') + '">Paid</span></td><td>' + (w ? '-' : '') + fmt(t.amount) + '</td></tr>';
@@ -827,10 +932,10 @@ async function removeAvatar() {
 
 function openWithdraw() {
   if (!current) return;
-  const b = bal(current);
-  document.getElementById('wAvail').textContent = 'Available balance: ' + fmt(b);
-  document.getElementById('wAmt').value = b;
-  document.getElementById('wAmt').max = b;
+  const avail = availToRequest(current);
+  document.getElementById('wAvail').textContent = 'Available: ' + fmt(avail) + ' • Sent as Pending for Admin approval';
+  document.getElementById('wAmt').value = avail;
+  document.getElementById('wAmt').max = avail;
   document.getElementById('wNote').value = 'Target Withdrawal';
   document.getElementById('wErr').innerHTML = '';
   document.getElementById('withdrawModal').classList.remove('hidden');
@@ -838,26 +943,114 @@ function openWithdraw() {
 function closeWithdraw() { document.getElementById('withdrawModal').classList.add('hidden'); }
 async function submitWithdraw() {
   if (!current) return;
-  const b = bal(current);
+  const avail = availToRequest(current);
   const amt = Number(document.getElementById('wAmt').value);
   const note = (document.getElementById('wNote').value.trim() || 'Target Withdrawal').slice(0, 120);
   const err = document.getElementById('wErr');
   if (!amt || amt <= 0) { err.innerHTML = '<div class="err">Enter a valid withdrawal amount.</div>'; return; }
-  if (amt > b) { err.innerHTML = '<div class="err">Amount cannot exceed your current balance (' + fmt(b) + ').</div>'; return; }
-  const nextTx = sanitizeTxList([...current.tx, { date: todayISO(), desc: note, type: 'Paid', withdraw: true, amount: amt }]);
+  if (amt > avail) { err.innerHTML = '<div class="err">Amount cannot exceed available balance (' + fmt(avail) + ').</div>'; return; }
+  const existingReqs = current.withdrawalRequests || [];
+  if (existingReqs.length >= 50) { err.innerHTML = '<div class="err">Withdrawal request limit reached. Please contact Admin.</div>'; return; }
+  const newReq = {
+    id: 'req_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    date: todayISO(),
+    note,
+    amount: amt,
+    status: 'pending'
+  };
+  const nextReqs = sanitizeWithdrawalRequests([...existingReqs, newReq]);
   if (current.docId) {
     try {
-      await updateDoc(doc(db, 'accounts', current.docId), { tx: nextTx, updatedAt: serverTimestamp() });
+      await updateDoc(doc(db, 'accounts', current.docId), { withdrawalRequests: nextReqs, updatedAt: serverTimestamp() });
     } catch (e) {
-      err.innerHTML = '<div class="err">Could not save withdrawal online. Please try again.</div>';
+      err.innerHTML = '<div class="err">Could not submit withdrawal request online. Please try again.</div>';
       handleFirestoreError(e, 'update', 'accounts/' + current.docId);
     }
   }
-  current.tx = nextTx;
+  current.withdrawalRequests = nextReqs;
   save();
   closeWithdraw();
   renderUser();
-  showUserToast('Withdrawal of ' + fmt(amt) + ' recorded.', true);
+  showUserToast('Withdrawal request of ' + fmt(amt) + ' submitted (Pending Admin approval).', true);
+}
+
+async function reviewWithdrawal(userId, reqId, decision) {
+  const u = users.find((x) => x.id === userId);
+  if (!u) return;
+  const reqs = u.withdrawalRequests || [];
+  const targetReq = reqs.find((r) => r.id === reqId && r.status === 'pending');
+  if (!targetReq) return;
+  const b = bal(u);
+  if (decision === 'approved' && targetReq.amount > b) {
+    showAdminToast('Cannot approve: requested ' + fmt(targetReq.amount) + ' exceeds balance (' + fmt(b) + ').', false);
+    return;
+  }
+  const reviewedAt = todayISO();
+  const nextReqs = sanitizeWithdrawalRequests(reqs.map((r) => (r.id === reqId ? { ...r, status: decision, reviewedAt } : r)));
+  const nextTx = decision === 'approved'
+    ? sanitizeTxList([...u.tx, { date: reviewedAt, desc: (targetReq.note || 'Approved Withdrawal').slice(0, 120), type: 'Paid', withdraw: true, amount: targetReq.amount }])
+    : u.tx;
+
+  if (isCloudAdmin()) {
+    const docId = u.docId || makeAccountId(u.name, u.code);
+    try {
+      const patch = { withdrawalRequests: nextReqs, updatedAt: serverTimestamp() };
+      if (decision === 'approved') patch.tx = nextTx;
+      await updateDoc(doc(db, 'accounts', docId), patch);
+    } catch (e) {
+      showAdminToast('Could not update withdrawal request in cloud.', false);
+      handleFirestoreError(e, 'update', 'accounts/' + docId);
+    }
+  } else {
+    u.withdrawalRequests = nextReqs;
+    u.tx = nextTx;
+    save();
+    if (detailId !== null && !document.getElementById('adminDetail').classList.contains('hidden')) openDetail(detailId);
+    else renderAdminList();
+  }
+  showAdminToast(decision === 'approved' ? ('Approved ' + fmt(targetReq.amount) + ' withdrawal for ' + u.name + '.') : ('Declined withdrawal request for ' + u.name + '.'), true);
+}
+
+function copyPhone(phone) {
+  copyTextSafe(phone).then((ok) => {
+    showAdminToast(ok ? 'Copied phone: ' + phone : 'Copy manually: ' + phone, ok);
+  });
+}
+
+function openPhoneEdit() {
+  const row = document.getElementById('phoneDisplayRow');
+  const form = document.getElementById('phoneEditRow');
+  if (row) row.classList.add('hidden');
+  if (form) form.classList.remove('hidden');
+}
+function closePhoneEdit() {
+  const row = document.getElementById('phoneDisplayRow');
+  const form = document.getElementById('phoneEditRow');
+  if (row) row.classList.remove('hidden');
+  if (form) form.classList.add('hidden');
+}
+async function saveDetailPhone() {
+  const u = users.find((x) => x.id === detailId);
+  if (!u) return;
+  const cleanPhone = (document.getElementById('detailPhoneInput').value || '').trim().slice(0, 30);
+  if (isCloudAdmin()) {
+    const docId = u.docId || makeAccountId(u.name, u.code);
+    try {
+      await updateDoc(doc(db, 'accounts', docId), {
+        phone: cleanPhone ? cleanPhone : deleteField(),
+        updatedAt: serverTimestamp()
+      });
+    } catch (e) {
+      showAdminToast('Could not save phone number online.', false);
+      handleFirestoreError(e, 'update', 'accounts/' + docId);
+    }
+  } else {
+    if (cleanPhone) u.phone = cleanPhone;
+    else delete u.phone;
+    save();
+    openDetail(detailId);
+  }
+  showAdminToast(cleanPhone ? 'Phone number updated.' : 'Phone number removed.', true);
 }
 
 function showAdmin() {
@@ -879,6 +1072,30 @@ function renderAdminList() {
     ' ' +
     (users.length === 1 ? 'User' : 'Users') +
     '</div></div>';
+
+  const allPending = [];
+  users.forEach((u) => {
+    (u.withdrawalRequests || []).forEach((r) => {
+      if (r.status === 'pending') allPending.push({ u, r });
+    });
+  });
+  const qBox = document.getElementById('adminPendingQueue');
+  if (qBox) {
+    qBox.innerHTML = allPending.length
+      ? '<div class="req-box"><div style="font-weight:800;font-size:14px;color:#B45309">Pending Withdrawal Requests (' + allPending.length + ')</div>' +
+        allPending.map(({ u, r }) =>
+          '<div class="req-row"><div><div style="font-weight:800;font-size:14px">' + esc(u.name) + ' • ' + fmt(r.amount) +
+          '</div><div style="font-size:12px;color:var(--muted);margin-top:2px">' + esc(r.note) + ' • ' + esc(r.date) +
+          (u.phone ? ' • ' + esc(u.phone) : '') +
+          '</div></div><div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">' +
+          (u.phone ? '<a href="' + formatTelHref(u.phone) + '" class="call-btn" style="padding:7px 10px;font-size:12px">Call</a>' : '') +
+          '<button type="button" class="approve-btn" onclick="reviewWithdrawal(' + u.id + ',\'' + esc(r.id) + '\',\'approved\')">Approve</button>' +
+          '<button type="button" class="decline-btn" onclick="reviewWithdrawal(' + u.id + ',\'' + esc(r.id) + '\',\'rejected\')">Decline</button></div></div>'
+        ).join('') +
+        '</div>'
+      : '';
+  }
+
   document.getElementById('adminSearchWrap').classList.remove('hidden');
   renderAdminRows();
 }
@@ -887,15 +1104,28 @@ function renderAdminRows() {
   const raw = (document.getElementById('adminSearch').value || '').trim();
   const q = raw.toLowerCase();
   document.getElementById('clearSearchBtn').classList.toggle('hidden', !raw);
-  const list = q ? users.filter((u) => u.name.toLowerCase().includes(q)) : users;
+  const list = q
+    ? users.filter((u) =>
+        u.name.toLowerCase().includes(q) ||
+        String(u.code || '').toLowerCase().includes(q) ||
+        String(u.phone || '').toLowerCase().includes(q)
+      )
+    : users;
   document.getElementById('adminList').innerHTML = list.length
-    ? list.map((u) =>
-        '<div class="userrow" onclick="openDetail(' + u.id + ')"><div class="flex"><div class="avatar">' +
-        renderAvatarHtml(u) +
-        '</div><div><b>' + esc(u.name) + ' • ' + esc(u.code) +
-        '</b><div style="color:var(--muted);font-size:13px">Target ' + esc(u.targetDate) + ' • ' + daysLeft(u.targetDate) +
-        ' days remaining</div></div></div><div><b>' + fmt(bal(u)) + '</b> <span style="color:var(--orange)">→</span></div></div>'
-      ).join('')
+    ? list.map((u) => {
+        const pCount = (u.withdrawalRequests || []).filter((r) => r.status === 'pending').length;
+        return '<div class="userrow" onclick="openDetail(' + u.id + ')"><div class="flex"><div class="avatar">' +
+          renderAvatarHtml(u) +
+          '</div><div><div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px"><b>' + esc(u.name) + ' • ' + esc(u.code) + '</b>' +
+          (pCount > 0 ? '<span class="pill pending" style="font-size:11px;padding:2px 8px">' + pCount + ' Pending</span>' : '') +
+          '</div><div style="color:var(--muted);font-size:13px">Target ' + esc(u.targetDate) + ' • ' + daysLeft(u.targetDate) + ' days remaining</div>' +
+          (u.phone
+            ? '<div style="display:flex;align-items:center;gap:6px;margin-top:4px"><span style="font-size:12px;font-weight:700;color:var(--muted)">' + esc(u.phone) +
+              '</span><a href="' + formatTelHref(u.phone) + '" class="call-btn" onclick="event.stopPropagation()">Call</a>' +
+              '<button type="button" class="mini-btn" onclick="event.stopPropagation();copyPhone(\'' + esc(u.phone).replace(/'/g, '&#39;') + '\')">Copy</button></div>'
+            : '') +
+          '</div></div><div style="margin-left:auto"><b>' + fmt(bal(u)) + '</b> <span style="color:var(--orange)">→</span></div></div>';
+      }).join('')
     : '<div class="card" style="text-align:center;color:var(--muted);font-weight:600">' +
       (q ? 'No savings accounts found matching &quot;' + esc(raw) + '&quot;.' : 'No savings accounts yet.') +
       '</div>';
@@ -907,18 +1137,42 @@ function openDetail(id) {
   const u = users.find((x) => x.id === id);
   if (!u) return;
   document.getElementById('adminSummary').innerHTML = '';
+  document.getElementById('adminPendingQueue').innerHTML = '';
   document.getElementById('adminSearchWrap').classList.add('hidden');
   document.getElementById('adminList').innerHTML = '';
   const d = document.getElementById('adminDetail');
   d.classList.remove('hidden');
+  const reqs = u.withdrawalRequests || [];
+  const reqHtml = reqs.length
+    ? '<h3 style="margin:16px 0 8px">Withdrawal Requests</h3>' +
+      reqs.slice().reverse().map((r) => {
+        const cls = r.status === 'pending' ? 'pending' : (r.status === 'approved' ? 'paid' : 'rejected');
+        const lbl = r.status === 'pending' ? 'Pending' : (r.status === 'approved' ? 'Approved' : 'Declined');
+        return '<div class="req-row" style="margin-top:0;margin-bottom:8px"><div><div style="font-weight:800;font-size:14px">' + fmt(r.amount) + ' — ' + esc(r.note) +
+          '</div><div style="font-size:12px;color:var(--muted);margin-top:2px">Requested ' + esc(r.date) + (r.reviewedAt ? ' • Reviewed ' + esc(r.reviewedAt) : '') +
+          '</div></div>' +
+          (r.status === 'pending'
+            ? '<div style="display:flex;gap:6px"><button type="button" class="approve-btn" onclick="reviewWithdrawal(' + u.id + ',\'' + esc(r.id) + '\',\'approved\')">Approve</button><button type="button" class="decline-btn" onclick="reviewWithdrawal(' + u.id + ',\'' + esc(r.id) + '\',\'rejected\')">Decline</button></div>'
+            : '<span class="pill ' + cls + '">' + lbl + '</span>') +
+          '</div>';
+      }).join('')
+    : '';
   d.innerHTML =
     '<div class="card"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center"><div class="flex"><div class="avatar" style="width:52px;height:52px;font-size:18px">' +
     renderAvatarHtml(u) +
     '</div><div><h2>' + esc(u.name) + ' • ' + esc(u.code) +
     '</h2><p style="color:var(--muted)">Target ' + esc(u.targetDate) + ' • ' + daysLeft(u.targetDate) +
-    ' days remaining</p></div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="ghost" onclick="copyCode()">Copy User Link / Code</button><button class="danger" onclick="askDelete()">🗑 Delete</button></div></div><div class="balance" style="margin-top:14px"><h2>Current Balance</h2><div class="big">' +
+    ' days remaining</p></div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="ghost" onclick="copyCode()">Copy User Link / Code</button><button class="danger" onclick="askDelete()">🗑 Delete</button></div></div>' +
+    '<div class="phone-box"><div id="phoneDisplayRow" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;width:100%"><div><span style="font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase">Phone:</span> <b>' +
+    esc(u.phone || 'Not added yet') +
+    '</b></div><div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">' +
+    (u.phone ? '<a href="' + formatTelHref(u.phone) + '" class="sync-btn" style="text-decoration:none;padding:7px 12px">Call User</a><button type="button" class="ghost" style="padding:7px 12px;font-size:12px" onclick="copyPhone(\'' + esc(u.phone).replace(/'/g, '&#39;') + '\')">Copy</button>' : '') +
+    '<button type="button" class="ghost" style="padding:7px 12px;font-size:12px" onclick="openPhoneEdit()">' + (u.phone ? 'Edit Phone' : '+ Add Phone') + '</button></div></div>' +
+    '<div id="phoneEditRow" class="hidden" style="display:flex;flex-wrap:wrap;gap:8px;width:100%"><input id="detailPhoneInput" type="tel" value="' + esc(u.phone || '') + '" placeholder="Enter phone number (e.g. 08012345678)" maxlength="30" style="flex:1;min-width:180px;padding:10px;font-size:14px"><button type="button" class="sync-btn" onclick="saveDetailPhone()">Save Phone</button><button type="button" class="ghost" style="padding:8px 12px;font-size:12px" onclick="closePhoneEdit()">Cancel</button></div></div>' +
+    '<div class="balance" style="margin-top:14px"><h2>Current Balance</h2><div class="big">' +
     fmt(bal(u)) + '</div><p>Target ' + fmt(u.target) +
-    '</p></div><div style="display:flex;align-items:center;gap:8px;margin:16px 0 8px"><h3>Add Transaction</h3><span class="pill paid">Paid</span></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px"><input id="tDate" type="date" value="' +
+    '</p></div>' + reqHtml +
+    '<div style="display:flex;align-items:center;gap:8px;margin:16px 0 8px"><h3>Add Transaction</h3><span class="pill paid">Paid</span></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px"><input id="tDate" type="date" value="' +
     todayISO() +
     '"><input id="tDesc" placeholder="Description"><input id="tAmt" type="number" placeholder="Amount"></div><div id="txErr"></div><button class="btn" onclick="addTx()">Add Transaction</button><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:16px 0 8px"><h3>History</h3><span style="font-size:12px;font-weight:700;color:var(--muted)">Tap any row or Edit to update</span></div><div style="overflow:auto"><table><thead><tr><th>Date</th><th>Description</th><th>Status</th><th>Amount</th><th style="text-align:right">Action</th></tr></thead><tbody>' +
     u.tx.map((t, i) => {
@@ -1054,31 +1308,44 @@ function openNew() {
   closeEditTx();
   document.getElementById('newForm').classList.remove('hidden');
   document.getElementById('adminSummary').innerHTML = '';
+  document.getElementById('adminPendingQueue').innerHTML = '';
   document.getElementById('adminSearchWrap').classList.add('hidden');
   document.getElementById('adminList').innerHTML = '';
   document.getElementById('adminDetail').classList.add('hidden');
+  document.getElementById('nName').value = '';
+  document.getElementById('nCode').value = '';
+  document.getElementById('nPhone').value = '';
+  document.getElementById('nTarget').value = '';
+  document.getElementById('nDate').value = '';
+  document.getElementById('nStart').value = '';
+  document.getElementById('newMsg').innerHTML = '';
 }
 function closeNew() { document.getElementById('newForm').classList.add('hidden'); renderAdminList(); }
 function genCode() {
-  let c = '';
-  do { c = String(Math.floor(1000 + Math.random() * 9000)); } while (users.some((u) => u.code === c));
+  const c = generateAlphanumericCode(users.map((u) => u.code));
   document.getElementById('nCode').value = c;
 }
 async function createUser() {
   const name = document.getElementById('nName').value.trim().slice(0, 80);
-  const code = document.getElementById('nCode').value.trim();
+  const code = document.getElementById('nCode').value.trim().toUpperCase();
+  const phone = (document.getElementById('nPhone').value || '').trim().slice(0, 30);
   const target = Math.max(0, Number(document.getElementById('nTarget').value) || 0);
   const date = document.getElementById('nDate').value || '2026-12-31';
   const start = Number(document.getElementById('nStart').value) || 0;
   const m = document.getElementById('newMsg');
-  if (!name || !/^\d{4}$/.test(code)) { m.innerHTML = '<div class="err">Enter Name and a 4-digit numeric Code.</div>'; return; }
+  if (!name || !isValidUserCode(code)) { m.innerHTML = '<div class="err">Enter Name and a 4–12 character alphanumeric Code (letters &amp; numbers).</div>'; return; }
+  if (name.toLowerCase() === 'admin' && code.toLowerCase() === 'gospel') {
+    m.innerHTML = '<div class="err">That Name and Code is reserved for Admin.</div>';
+    return;
+  }
   const docId = makeAccountId(name, code);
-  if (users.some((u) => u.code === code || makeAccountId(u.name, u.code) === docId)) {
+  if (users.some((u) => String(u.code || '').toUpperCase() === code || makeAccountId(u.name, u.code) === docId)) {
     m.innerHTML = '<div class="err">Code already used. Generate another.</div>';
     return;
   }
   const tx = start ? [{ date: todayISO(), desc: 'Opening Balance', type: 'Paid', amount: start }] : [];
-  const created = { id: Date.now(), docId, name, code, target, targetDate: date, tx };
+  const created = { id: Date.now(), docId, name, code, target, targetDate: date, tx, withdrawalRequests: [] };
+  if (phone) created.phone = phone;
 
   if (isCloudAdmin()) {
     try {
@@ -1106,6 +1373,7 @@ function logout() {
   closeEditTx();
   document.getElementById('adminSearch').value = '';
   document.getElementById('adminSummary').innerHTML = '';
+  document.getElementById('adminPendingQueue').innerHTML = '';
   document.getElementById('adminSearchWrap').classList.add('hidden');
   document.getElementById('userToast').innerHTML = '';
   document.getElementById('adminToast').innerHTML = '';
@@ -1126,6 +1394,11 @@ Object.assign(window, {
   openWithdraw,
   closeWithdraw,
   submitWithdraw,
+  reviewWithdrawal,
+  copyPhone,
+  openPhoneEdit,
+  closePhoneEdit,
+  saveDetailPhone,
   copyBank,
   logout,
   openNew,
