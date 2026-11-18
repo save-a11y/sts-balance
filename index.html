@@ -272,7 +272,6 @@ import {
 } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js';
 
 const ADMIN_EMAIL = 'amaechihellis@gmail.com';
-const AUTHORIZED_ADMIN_APP_URL = 'https://ais-pre-4wjb54araas4avo5lroyyk-237646026873.europe-west3.run.app';
 const FIREBASE_AUTH_SETTINGS_URL = 'https://console.firebase.google.com/project/basic-cistern-914dk/authentication/settings';
 const firebaseConfig = {
   projectId: 'basic-cistern-914dk',
@@ -461,7 +460,6 @@ function renderCloudSyncBox() {
   const errBox = document.getElementById('cloudErrBox');
   if (!box) return;
   const host = window.location.hostname;
-  const isExternalHost = host && !host.endsWith('.run.app') && host !== 'localhost' && host !== '127.0.0.1';
   if (isCloudAdmin()) {
     box.innerHTML =
       '<div class="sync-box on"><div><div style="font-weight:800;font-size:14px">Online Cloud Sync Active (' +
@@ -473,31 +471,28 @@ function renderCloudSyncBox() {
       '</div></div><button type="button" class="ghost" style="padding:8px 12px;font-size:12px" onclick="adminGoogleSignOut()">Disconnect</button></div>';
   } else {
     box.innerHTML =
-      '<div class="sync-box off"><div><div style="font-weight:800;font-size:14px">Online Cloud Sync Not Connected</div><div style="font-size:12px;margin-top:2px">' +
-      (isExternalHost
-        ? 'Sign in with Google (' + esc(ADMIN_EMAIL) + ') to sync accounts, or use the Authorized Admin App.'
-        : 'Sign in with Google (' + esc(ADMIN_EMAIL) + ') so accounts sync to users&#39; phones.') +
-      '</div></div><div style="display:flex;flex-wrap:wrap;gap:8px"><button type="button" class="sync-btn" onclick="adminGoogleSignIn()" ' +
+      '<div class="sync-box off"><div><div style="font-weight:800;font-size:14px">Online Cloud Sync Not Connected</div><div style="font-size:12px;margin-top:2px">Sign in with Google (' +
+      esc(ADMIN_EMAIL) +
+      ') so accounts sync to users&#39; phones.</div></div><button type="button" class="sync-btn" onclick="adminGoogleSignIn()" ' +
       (authBusy ? 'disabled' : '') +
       '>' +
       (authBusy ? 'Signing in...' : 'Sign in with Google') +
-      '</button>' +
-      (isExternalHost
-        ? '<a href="' + AUTHORIZED_ADMIN_APP_URL + '" target="_blank" rel="noopener noreferrer" class="ghost" style="padding:8px 12px;font-size:12px;text-decoration:none;display:inline-flex;align-items:center">Open Authorized Admin ↗</a>'
-        : '') +
-      '</div></div>';
+      '</button></div>';
   }
   if (errBox) {
     let html = '';
     if (domainBlocked && !isCloudAdmin()) {
       html +=
         '<div class="card" style="padding:16px;margin-bottom:12px;border-radius:16px;border-color:#BFDBFE">' +
-        '<div style="font-weight:800;font-size:14px">Use Authorized Admin App or Authorize “' + esc(host) + '”</div>' +
-        '<p style="font-size:12px;line-height:1.55;margin-top:6px;color:var(--muted)">Firebase restricts Google Sign-In to approved domains. You can manage &amp; sync accounts right now in the <b>Authorized Admin App</b> (users on this site can still log in immediately with Name &amp; Code), or add <b>' + esc(host) + '</b> in Firebase Auth Settings.</p>' +
+        '<div style="font-weight:800;font-size:14px">Authorize “' + esc(host) + '” in Firebase to Sync</div>' +
+        '<ol style="font-size:12px;line-height:1.65;margin-top:6px;padding-left:18px;color:var(--muted)">' +
+        '<li>Tap <b>Copy ' + esc(host) + '</b> below.</li>' +
+        '<li>Open <b>Firebase Auth Settings</b> → <b>Authorized domains</b> → <b>Add domain</b> and paste it.</li>' +
+        '<li>Come back here and tap <b>Sign in with Google</b> again.</li>' +
+        '</ol>' +
         '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">' +
-        '<a href="' + AUTHORIZED_ADMIN_APP_URL + '" target="_blank" rel="noopener noreferrer" class="sync-btn" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px">Open Authorized Admin App ↗</a>' +
         '<button type="button" class="ghost" style="padding:8px 12px;font-size:12px" onclick="copyCurrentHost()">Copy ' + esc(host) + '</button>' +
-        '<a href="' + FIREBASE_AUTH_SETTINGS_URL + '" target="_blank" rel="noopener noreferrer" class="ghost" style="padding:8px 12px;font-size:12px;text-decoration:none;display:inline-flex;align-items:center">Firebase Auth Settings ↗</a>' +
+        '<a href="' + FIREBASE_AUTH_SETTINGS_URL + '" target="_blank" rel="noopener noreferrer" class="sync-btn" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px">Open Firebase Auth Settings ↗</a>' +
         '</div></div>';
     }
     if (cloudError) {
